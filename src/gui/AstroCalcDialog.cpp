@@ -42,6 +42,7 @@
 #include <QStringListModel>
 
 #include "AstroCalcDialog.hpp"
+#include "AstroCalcExtraEphemerisDialog.hpp"
 #include "ui_astroCalcDialog.h"
 
 #include "external/qcustomplot/qcustomplot.h"
@@ -82,6 +83,7 @@ QString AstroCalcDialog::yAxis2Legend = "";
 
 AstroCalcDialog::AstroCalcDialog(QObject* parent)
 	: StelDialog("AstroCalc", parent)
+	, extraEphemerisDialog(Q_NULLPTR)
 	, wutModel(Q_NULLPTR)
 	, proxyModel(Q_NULLPTR)
 	, currentTimeLine(Q_NULLPTR)
@@ -125,6 +127,7 @@ AstroCalcDialog::~AstroCalcDialog()
 		currentTimeLine = Q_NULLPTR;
 	}
 	delete ui;
+	delete extraEphemerisDialog;
 }
 
 void AstroCalcDialog::retranslate()
@@ -229,11 +232,18 @@ void AstroCalcDialog::createDialogContent()
 	ui->monthlyElevationTimeInfo->setStyleSheet("font-size: 18pt; color: rgb(238, 238, 238);");
 
 	// TODO: Switch a QDateTimeEdit to StelDateTimeEdit widget to apply wide range of dates
-	QDate min = QDate(100, 1, 1);
+	// NOTE: https://github.com/Stellarium/stellarium/issues/711
+	QDate min = QDate(1600, 1, 1);
+	QString validDates = QString("%1 1600/1/1 - 9999/12/31").arg(q_("Gregorian dates. Valid range:"));
 	ui->dateFromDateTimeEdit->setMinimumDate(min);
+	ui->dateFromDateTimeEdit->setToolTip(validDates);
 	ui->dateToDateTimeEdit->setMinimumDate(min);
+	ui->dateToDateTimeEdit->setToolTip(validDates);
 	ui->phenomenFromDateEdit->setMinimumDate(min);
-	ui->phenomenToDateEdit->setMinimumDate(min);
+	ui->phenomenFromDateEdit->setToolTip(validDates);
+	ui->phenomenToDateEdit->setMinimumDate(min);	
+	ui->phenomenToDateEdit->setToolTip(validDates);
+	ui->pushButtonExtraEphemerisDialog->setFixedSize(QSize(20, 20));
 
 	// bug #1350669 (https://bugs.launchpad.net/stellarium/+bug/1350669)
 	connect(ui->celestialPositionsTreeWidget, SIGNAL(currentItemChanged(QTreeWidgetItem*, QTreeWidgetItem*)), ui->celestialPositionsTreeWidget, SLOT(repaint()));
@@ -254,6 +264,7 @@ void AstroCalcDialog::createDialogContent()
 	connect(dsoMgr, SIGNAL(minSizeLimitChanged(double)), this, SLOT(currentCelestialPositions()));
 	connect(dsoMgr, SIGNAL(maxSizeLimitChanged(double)), this, SLOT(currentCelestialPositions()));
 
+	connectBoolProperty(ui->ephemerisShowLineCheckBox, "SolarSystem.ephemerisLineDisplayed");
 	connectBoolProperty(ui->ephemerisShowMarkersCheckBox, "SolarSystem.ephemerisMarkersDisplayed");
 	connectBoolProperty(ui->ephemerisShowDatesCheckBox, "SolarSystem.ephemerisDatesDisplayed");
 	connectBoolProperty(ui->ephemerisShowMagnitudesCheckBox, "SolarSystem.ephemerisMagnitudesDisplayed");
@@ -420,6 +431,8 @@ void AstroCalcDialog::createDialogContent()
 	connect(ui->tabWidgetGraphs, SIGNAL(currentChanged(int)), this, SLOT(changeGraphsTab(int)));
 	connect(ui->tabWidgetPC, SIGNAL(currentChanged(int)), this, SLOT(changePCTab(int)));
 
+	connect(ui->pushButtonExtraEphemerisDialog, SIGNAL(clicked()), this, SLOT(showExtraEphemerisDialog()));
+
 	updateTabBarListWidgetWidth();
 
 	// Let's improve visibility of the text
@@ -438,6 +451,14 @@ void AstroCalcDialog::createDialogContent()
 	ui->moonAltitudeCheckBox->setStyleSheet(style);
 	ui->positiveAltitudeOnlyCheckBox->setStyleSheet(style);
 	ui->monthlyElevationPositiveCheckBox->setStyleSheet(style);
+}
+
+void AstroCalcDialog::showExtraEphemerisDialog()
+{
+	if (extraEphemerisDialog == Q_NULLPTR)
+		extraEphemerisDialog = new AstroCalcExtraEphemerisDialog();
+
+	extraEphemerisDialog->setVisible(true);
 }
 
 void AstroCalcDialog::searchWutClear()
@@ -574,7 +595,7 @@ void AstroCalcDialog::drawAziVsTimeDiagram()
 		StelObjectP selectedObject = selectedObjects[0];
 		double currentJD = core->getJD();
 		double shift = core->getUTCOffset(currentJD) / 24.0;
-		double noon = (int)(currentJD + shift);
+		double noon = static_cast<int>(currentJD + shift);
 		double az, alt, deg, ltime, JD;
 		bool sign;
 
@@ -686,7 +707,7 @@ void AstroCalcDialog::mouseOverAziLine(QMouseEvent* event)
 			}
 			else
 			{
-				JD = x / 86400.0 + (int)core->getJD() - 0.5;
+				JD = x / 86400.0 + static_cast<int>(core->getJD()) - 0.5;
 				QString LT = StelUtils::jdToQDateTime(JD - core->getUTCOffset(JD)).toString("H:mm");
 				if (StelApp::getInstance().getFlagShowDecimalDegrees())
 					info = QString("%1<br />%2: %3<br />%4: %5%6").arg(ui->aziVsTimePlot->graph(0)->name(), q_("Local Time"), LT, q_("Azimuth"), QString::number(y, 'f', 2), QChar(0x00B0));
@@ -1376,7 +1397,10 @@ void AstroCalcDialog::generateEphemeris()
 	const PlanetP& cplanet = core->getCurrentPlanet();	
 	if (!cplanet->getEnglishName().contains("observer", Qt::CaseInsensitive))
 	{
-		solarDay = cplanet->getMeanSolarDay();
+		if (cplanet==solarSystem->getEarth())
+			solarDay = 1.0; // Special case: OK, it's Earth, let's use standard duration of the solar day
+		else
+			solarDay = cplanet->getMeanSolarDay();
 		siderealDay = cplanet->getSiderealDay();
 		siderealYear = cplanet->getSiderealPeriod();
 	}
@@ -1493,17 +1517,20 @@ void AstroCalcDialog::generateEphemeris()
 		case 37:
 			currentStep = 500. * solarDay;
 			break;
+		case 38:
+			currentStep = StelCore::JD_MINUTE;
+			break;
 		default:
 			currentStep = solarDay;
 			break;
 	}
 
 	double currentJD = core->getJD(); // save current JD
-	double firstJD = StelUtils::qDateTimeToJd(ui->dateFromDateTimeEdit->dateTime());
-	firstJD = firstJD - core->getUTCOffset(firstJD) / 24;
-	double secondJD = StelUtils::qDateTimeToJd(ui->dateToDateTimeEdit->dateTime());
-	secondJD = secondJD - core->getUTCOffset(secondJD) / 24;
-	int elements = (int)((secondJD - firstJD) / currentStep);
+	double firstJD = StelUtils::qDateTimeToJd(ui->dateFromDateTimeEdit->dateTime());	
+	firstJD = firstJD - core->getUTCOffset(firstJD) / 24.;
+	double secondJD = StelUtils::qDateTimeToJd(ui->dateToDateTimeEdit->dateTime());	
+	secondJD = secondJD - core->getUTCOffset(secondJD) / 24.;
+	int elements = static_cast<int>((secondJD - firstJD) / currentStep);
 	EphemerisList.clear();
 	bool allNakedEyePlanets = (ui->allNakedEyePlanetsCheckBox->isChecked() && cplanet==solarSystem->getEarth());
 	bool withTime = false;
@@ -1554,7 +1581,7 @@ void AstroCalcDialog::generateEphemeris()
 			elongStr = dash;
 		}
 
-		for (int i = 0; i < elements; i++)
+		for (int i = 0; i <= elements; i++)
 		{
 			double JD = firstJD + i * currentStep;
 			core->setJD(JD);
@@ -1848,6 +1875,7 @@ void AstroCalcDialog::populateEphemerisTimeStepsList()
 	QVariant selectedStepId = steps->itemData(index);
 
 	steps->clear();
+	steps->addItem(q_("1 minute"), "38");
 	steps->addItem(q_("10 minutes"), "1");
 	steps->addItem(q_("30 minutes"), "2");
 	steps->addItem(q_("1 hour"), "3");
@@ -1994,13 +2022,16 @@ void AstroCalcDialog::populateGroupCelestialBodyList()
 	groups->addItem(q_("Bright double stars (<%1 mag)").arg(QString::number(brightLimit - 5.0f, 'f', 1)), "11");
 	groups->addItem(q_("Bright variable stars (<%1 mag)").arg(QString::number(brightLimit - 5.0f, 'f', 1)), "12");
 	groups->addItem(q_("Bright star clusters (<%1 mag)").arg(brLimit), "13");
-	groups->addItem(q_("Planetary nebulae"), "14");
+	groups->addItem(q_("Planetary nebulae (<%1 mag)").arg(brLimit), "14");
 	groups->addItem(q_("Bright nebulae (<%1 mag)").arg(brLimit), "15");
 	groups->addItem(q_("Dark nebulae"), "16");
 	groups->addItem(q_("Bright galaxies (<%1 mag)").arg(brLimit), "17");
 	groups->addItem(q_("Symbiotic stars"), "18");
 	groups->addItem(q_("Emission-line stars"), "19");
 	groups->addItem(q_("Interstellar objects"), "20");
+	groups->addItem(q_("Planets and Sun"), "21");
+	groups->addItem(q_("Sun, planets and moons"), "22");
+	groups->addItem(q_("Bright Solar system objects (<%1 mag)").arg(QString::number(brightLimit + 2.0f, 'f', 1)), "23");
 
 	index = groups->findData(selectedGroupId, Qt::UserRole, Qt::MatchCaseSensitive);
 	if (index < 0)
@@ -2063,7 +2094,7 @@ void AstroCalcDialog::drawAltVsTimeDiagram()
 
 		double currentJD = core->getJD();
 		double shift = core->getUTCOffset(currentJD) / 24.0;
-		double noon = (int)(currentJD + shift);
+		double noon = static_cast<int>(currentJD + shift);
 		double az, alt, deg, ltime, JD;
 		bool sign;
 
@@ -2260,7 +2291,7 @@ void AstroCalcDialog::drawCurrentTimeDiagram()
 
 	double currentJD = core->getJD();
 	double UTCOffset = core->getUTCOffset(currentJD);
-	double now = ((currentJD + 0.5 - (int)currentJD) * 86400.0) + UTCOffset * 3600.0;
+	double now = ((currentJD + 0.5 - static_cast<int>(currentJD)) * 86400.0) + UTCOffset * 3600.0;
 
 	if (now > 129600) now -= 86400;
 	if (now < 43200) now += 86400;
@@ -2283,7 +2314,7 @@ void AstroCalcDialog::drawCurrentTimeDiagram()
 
 	// detect roll over graph day limits.
 	// if so, update the graph
-	int graphJD = (int)(currentJD + UTCOffset / 24);
+	int graphJD = static_cast<int>(currentJD + UTCOffset / 24.);
 	if (oldGraphJD != graphJD || graphPlotNeedsRefresh)
 	{
 		oldGraphJD = graphJD;
@@ -2410,7 +2441,7 @@ void AstroCalcDialog::drawXVsTimeGraphs()
 
 		double width = 1.0;
 		double UTCshift = core->getUTCOffset(startJD) / 24.;
-		int dYear = (int)core->getCurrentPlanet()->getSiderealPeriod() + 3;
+		int dYear = static_cast<int>(core->getCurrentPlanet()->getSiderealPeriod()) + 3;
 		int firstGraph = ui->graphsFirstComboBox->currentData().toInt();
 		int secondGraph = ui->graphsSecondComboBox->currentData().toInt();
 
@@ -2507,10 +2538,12 @@ double AstroCalcDialog::computeGraphValue(const PlanetP &ssObj, const int graphT
 			value = ssObj->getElongation(core->getObserverHeliocentricEclipticPos()) * 180. / M_PI;
 			break;
 		case GraphAngularSizeVsTime:
+		{
 			value = ssObj->getAngularSize(core) * 360. / M_PI;
 			if (value < 1.)
 				value *= 60.;
 			break;
+		}
 		case GraphPhaseAngleVsTime:
 			value = ssObj->getPhaseAngle(core->getObserverHeliocentricEclipticPos()) * 180. / M_PI;
 			break;
@@ -2518,6 +2551,7 @@ double AstroCalcDialog::computeGraphValue(const PlanetP &ssObj, const int graphT
 			value =  ssObj->getHeliocentricEclipticPos().length();
 			break;
 		case GraphTransitAltitudeVsTime:
+		{
 			double az, alt;
 			bool sign;
 			StelUtils::rectToSphe(&az, &alt, ssObj->getAltAzPosAuto(core));
@@ -2525,6 +2559,27 @@ double AstroCalcDialog::computeGraphValue(const PlanetP &ssObj, const int graphT
 			if (!sign)
 				value *= -1;
 			break;
+		}
+		case GraphRightAscensionVsTime:
+		{
+			double dec_equ, ra_equ;
+			StelUtils::rectToSphe(&ra_equ, &dec_equ, ssObj->getEquinoxEquatorialPos(core));
+			ra_equ = 2.*M_PI-ra_equ;
+			value = ra_equ*12./M_PI;
+			if (value>24.)
+				value -= 24.;
+			break;
+		}
+		case GraphDeclinationVsTime:
+		{
+			double dec_equ, ra_equ;
+			bool sign;
+			StelUtils::rectToSphe(&ra_equ, &dec_equ, ssObj->getEquinoxEquatorialPos(core));
+			StelUtils::radToDecDeg(dec_equ, sign, value); // convert to degrees
+			if (!sign)
+				value *= -1;
+			break;
+		}
 	}
 	return value;
 }
@@ -2563,6 +2618,13 @@ void AstroCalcDialog::populateFunctionsList()
 	// TRANSLATORS: The phrase "Transit altitude" may be long in some languages and you can short it to use in the drop-down list.
 	cf.first = q_("Transit altitude vs. Time");
 	cf.second = GraphTransitAltitudeVsTime;
+	functions.append(cf);
+	// TRANSLATORS: The phrase "Right ascension" may be long in some languages and you can short it to use in the drop-down list.
+	cf.first = q_("Right ascension vs. Time");
+	cf.second = GraphRightAscensionVsTime;
+	functions.append(cf);
+	cf.first = q_("Declination vs. Time");
+	cf.second = GraphDeclinationVsTime;
 	functions.append(cf);
 
 	QComboBox* first = ui->graphsFirstComboBox;
@@ -2666,6 +2728,17 @@ void AstroCalcDialog::prepareXVsTimeAxesAndGraph()
 			if (minY1 < -1000.) minY1 = 0.0;
 			if (maxY1 > 1000.) maxY1 = 90.0;
 			break;
+		case GraphRightAscensionVsTime:
+			// TRANSLATORS: The phrase "Right ascension" may be long in some languages and you can short it.
+			yAxis1Legend = QString("%1, %2").arg(qc_("Right ascension","axis name"), qc_("h","time"));
+			if (minY1 < -1000.) minY1 = 0.0;
+			if (maxY1 > 1000.) maxY1 = 24.0;
+			break;
+		case GraphDeclinationVsTime:
+			yAxis1Legend = QString("%1, %2").arg(q_("Declination"), QChar(0x00B0));
+			if (minY1 < -1000.) minY1 = -90.0;
+			if (maxY1 > 1000.) maxY1 = 90.0;
+			break;
 	}
 
 	switch (ui->graphsSecondComboBox->currentData().toInt())
@@ -2713,6 +2786,17 @@ void AstroCalcDialog::prepareXVsTimeAxesAndGraph()
 			if (minY2 < -1000.) minY2 = 0.0;
 			if (maxY2 > 1000.) maxY2 = 90.0;
 			break;
+		case GraphRightAscensionVsTime:
+			// TRANSLATORS: The phrase "Right ascension" may be long in some languages and you can short it.
+			yAxis2Legend = QString("%1, %2").arg(qc_("Right ascension","axis name"), qc_("h","time"));
+			if (minY2 < -1000.) minY2 = 0.0;
+			if (maxY2 > 1000.) maxY2 = 24.0;
+			break;
+		case GraphDeclinationVsTime:
+			yAxis2Legend = QString("%1, %2").arg(q_("Declination"), QChar(0x00B0));
+			if (minY2 < -1000.) minY2 = -90.0;
+			if (maxY2 > 1000.) maxY2 = 90.0;
+			break;
 	}
 
 	QColor axisColor(Qt::white);
@@ -2727,7 +2811,7 @@ void AstroCalcDialog::prepareXVsTimeAxesAndGraph()
 	ui->graphsPlot->yAxis->setLabel(yAxis1Legend);
 	ui->graphsPlot->yAxis2->setLabel(yAxis2Legend);
 
-	int dYear = ((int)core->getCurrentPlanet()->getSiderealPeriod() + 1) * 86400;
+	int dYear = (static_cast<int>(core->getCurrentPlanet()->getSiderealPeriod()) + 1) * 86400;
 	ui->graphsPlot->xAxis->setRange(0, dYear);
 	ui->graphsPlot->xAxis->setScaleType(QCPAxis::stLinear);
 	ui->graphsPlot->xAxis->setTickLabelType(QCPAxis::ltDateTime);
@@ -2786,7 +2870,7 @@ void AstroCalcDialog::prepareMonthlyEleveationAxesAndGraph()
 	ui->monthlyElevationGraph->xAxis->setLabel(xAxisStr);
 	ui->monthlyElevationGraph->yAxis->setLabel(yAxisStr);
 
-	int dYear = ((int)core->getCurrentPlanet()->getSiderealPeriod() + 1) * 86400;
+	int dYear = (static_cast<int>(core->getCurrentPlanet()->getSiderealPeriod()) + 1) * 86400;
 	ui->monthlyElevationGraph->xAxis->setRange(0, dYear);
 	ui->monthlyElevationGraph->xAxis->setScaleType(QCPAxis::stLinear);
 	ui->monthlyElevationGraph->xAxis->setTickLabelType(QCPAxis::ltDateTime);
@@ -2892,7 +2976,7 @@ void AstroCalcDialog::drawMonthlyElevationGraph()
 		StelUtils::getDateFromJulianDay(currentJD, &year, &month, &day);
 		StelUtils::getJDFromDate(&startJD, year, 1, 1, hour, 0, 0);
 		startJD -= core->getUTCOffset(startJD)/24; // Time zone correction
-		int dYear = (int)core->getCurrentPlanet()->getSiderealPeriod() + 3;
+		int dYear = static_cast<int>(core->getCurrentPlanet()->getSiderealPeriod()) + 3;
 		for (int i = -2; i <= dYear; i++)
 		{
 			JD = startJD + i;
@@ -2983,7 +3067,7 @@ void AstroCalcDialog::setClickedTime(double posx)
 {
 	double JD = core->getJD();
 	double shift = core->getUTCOffset(JD) / 24;
-	int noonJD = (int)(JD + shift);
+	int noonJD = static_cast<int>(JD + shift);
 	JD = posx / 86400.0 + noonJD - 0.5 - shift;
 
 	core->setRealTimeSpeed();
@@ -3043,7 +3127,7 @@ void AstroCalcDialog::mouseOverLine(QMouseEvent* event)
 			}
 			else if (graph->name() == "[Transit]")
 			{
-				JD = transitX / 86400.0 + (int)core->getJD() - 0.5;
+				JD = transitX / 86400.0 + static_cast<int>(core->getJD()) - 0.5;
 				info = q_("Passage of meridian at approximately %1").arg(StelUtils::jdToQDateTime(JD - core->getUTCOffset(JD)).toString("H:mm"));
 			}
 			else if (graph->name() == "[Sun]")
@@ -3058,7 +3142,7 @@ void AstroCalcDialog::mouseOverLine(QMouseEvent* event)
 				info = q_("Line of astronomical twilight");
 			else
 			{
-				JD = x / 86400.0 + (int)core->getJD() - 0.5;
+				JD = x / 86400.0 + static_cast<int>(core->getJD()) - 0.5;
 				QString LT = StelUtils::jdToQDateTime(JD - core->getUTCOffset(JD)).toString("H:mm");
 
 				if (StelApp::getInstance().getFlagShowDecimalDegrees())
@@ -3084,8 +3168,12 @@ void AstroCalcDialog::setPhenomenaHeaderNames()
 	phenomenaHeader << q_("Phenomenon");
 	phenomenaHeader << q_("Date and Time");
 	phenomenaHeader << q_("Object 1");
+	// TRANSLATORS: Magnitude of object 1
+	phenomenaHeader << q_("Mag. 1");
 	phenomenaHeader << q_("Object 2");
-	phenomenaHeader << q_("Separation");	
+	// TRANSLATORS: Magnitude of object 2
+	phenomenaHeader << q_("Mag. 2");
+	phenomenaHeader << q_("Separation");
 	phenomenaHeader << q_("Solar Elongation");
 	phenomenaHeader << q_("Lunar Elongation");
 	ui->phenomenaTreeWidget->setHeaderLabels(phenomenaHeader);
@@ -3151,7 +3239,7 @@ void AstroCalcDialog::calculatePhenomena()
 	int obj2Type = ui->object2ComboBox->currentData().toInt();
 	switch (obj2Type)
 	{
-		case 0: // Solar system
+		case 0: // All Solar system objects
 			for (const auto& object : allObjects)
 			{
 				if (object->getPlanetType() != Planet::isUNDEFINED)
@@ -3245,7 +3333,7 @@ void AstroCalcDialog::calculatePhenomena()
 		case 14: // Planetary nebulae
 			for (const auto& object : allDSO)
 			{
-				if (object->getDSOType() == Nebula::NebPn || object->getDSOType() == Nebula::NebPossPN || object->getDSOType() == Nebula::NebPPN)
+				if (object->getVMagnitude(core) < brightLimit && (object->getDSOType() == Nebula::NebPn || object->getDSOType() == Nebula::NebPossPN || object->getDSOType() == Nebula::NebPPN))
 					dso.append(object);
 			}
 			break;
@@ -3284,9 +3372,34 @@ void AstroCalcDialog::calculatePhenomena()
 					dso.append(object);
 			}
 			break;
+		case 21: // Planets and Sun
+			for (const auto& object : allObjects)
+			{
+				if ((object->getPlanetType() == Planet::isPlanet || object->getPlanetType() == Planet::isStar) && object->getEnglishName() != core->getCurrentPlanet()->getEnglishName() && object->getEnglishName() != currentPlanet)
+					objects.append(object);
+			}
+			break;
+		case 22: // Sun, planets and moons
+		{
+			PlanetP cp = core->getCurrentPlanet();
+			for (const auto& object : allObjects)
+			{
+				if ((object->getPlanetType() == Planet::isPlanet || object->getPlanetType() == Planet::isStar || (object->getParent()==cp && object->getPlanetType()==Planet::isMoon)) && object->getEnglishName() != cp->getEnglishName() && object->getEnglishName() != currentPlanet)
+					objects.append(object);
+			}
+			break;
+		}
+		case 23: // Bright Solar system objects
+			for (const auto& object : allObjects)
+			{
+				if (object->getVMagnitude(core) < (brightLimit + 2.0f) && object->getPlanetType() != Planet::isUNDEFINED)
+					objects.append(object);
+			}
+			break;
 	}
 
 	PlanetP planet = solarSystem->searchByEnglishName(currentPlanet);
+	PlanetP sun = solarSystem->getSun();
 	if (planet)
 	{
 		double currentJD = core->getJD();   // save current JD
@@ -3310,24 +3423,24 @@ void AstroCalcDialog::calculatePhenomena()
 				if (selectedObject!=planet && selectedObject->getType() != "Satellite")
 				{
 					// conjunction
-					fillPhenomenaTable(findClosestApproach(planet, selectedObject, startJD, stopJD, separation, false), planet, selectedObject, false);
+					fillPhenomenaTable(findClosestApproach(planet, selectedObject, startJD, stopJD, separation, PhenomenaTypeIndex::Conjuction), planet, selectedObject, PhenomenaTypeIndex::Conjuction);
 					// opposition
 					if (opposition)
-						fillPhenomenaTable(findClosestApproach(planet, selectedObject, startJD, stopJD, separation, true), planet, selectedObject, true);
+						fillPhenomenaTable(findClosestApproach(planet, selectedObject, startJD, stopJD, separation, PhenomenaTypeIndex::Opposition), planet, selectedObject, PhenomenaTypeIndex::Opposition);
 				}
 			}
 		}
-		else if ((obj2Type >= 0 && obj2Type < 10) || obj2Type == 20)
+		else if ((obj2Type >= 0 && obj2Type < 10) || (obj2Type >= 20 && obj2Type <= 23))
 		{
 			// Solar system objects
 			for (auto& obj : objects)
 			{
 				// conjunction
 				StelObjectP mObj = qSharedPointerCast<StelObject>(obj);
-				fillPhenomenaTable(findClosestApproach(planet, mObj, startJD, stopJD, separation, false), planet, obj, false);
+				fillPhenomenaTable(findClosestApproach(planet, mObj, startJD, stopJD, separation, PhenomenaTypeIndex::Conjuction), planet, obj, PhenomenaTypeIndex::Conjuction);
 				// opposition
 				if (opposition)
-					fillPhenomenaTable(findClosestApproach(planet, mObj, startJD, stopJD, separation, true), planet, obj, true);
+					fillPhenomenaTable(findClosestApproach(planet, mObj, startJD, stopJD, separation, PhenomenaTypeIndex::Opposition), planet, obj, PhenomenaTypeIndex::Opposition);
 			}
 		}
 		else if (obj2Type == 10 || obj2Type == 11 || obj2Type == 12)
@@ -3341,7 +3454,7 @@ void AstroCalcDialog::calculatePhenomena()
 				{
 					// conjunction
 					StelObjectP mObj = qSharedPointerCast<StelObject>(obj);
-					fillPhenomenaTable(findClosestApproach(planet, mObj, startJD, stopJD, separation, false), planet, obj, false);
+					fillPhenomenaTable(findClosestApproach(planet, mObj, startJD, stopJD, separation, PhenomenaTypeIndex::Conjuction), planet, obj, PhenomenaTypeIndex::Conjuction);
 				}
 			}
 		}
@@ -3356,9 +3469,21 @@ void AstroCalcDialog::calculatePhenomena()
 				{
 					// conjunction
 					StelObjectP mObj = qSharedPointerCast<StelObject>(obj);
-					fillPhenomenaTable(findClosestApproach(planet, mObj, startJD, stopJD, separation, false), planet, obj);
+					fillPhenomenaTable(findClosestApproach(planet, mObj, startJD, stopJD, separation, PhenomenaTypeIndex::Conjuction), planet, obj);
 				}
 			}
+		}
+
+		if (planet!=sun && planet->getPlanetType()!=Planet::isMoon)
+		{
+			StelObjectP mObj = qSharedPointerCast<StelObject>(sun);
+			if (planet->getHeliocentricEclipticPos().length()<core->getCurrentPlanet()->getHeliocentricEclipticPos().length())
+			{
+				// greatest elongations for inner planets
+				fillPhenomenaTable(findGreatestElongationApproach(planet, mObj, startJD, stopJD), planet, sun, PhenomenaTypeIndex::GreatestElongation);
+			}
+			// stationary points
+			fillPhenomenaTable(findStationaryPointApproach(planet, startJD, stopJD), planet, sun, PhenomenaTypeIndex::StationaryPoint);
 		}
 
 		core->setJD(currentJD); // restore time
@@ -3446,9 +3571,9 @@ void AstroCalcDialog::savePhenomena()
 	}
 }
 
-void AstroCalcDialog::fillPhenomenaTableVis(QString phenomenType, double JD, QString firstObjectName, QString secondObjectName,
-					    QString separation, QString elongation, QString angularDistance,
-					    QString elongTooltip, QString angDistTooltip)
+void AstroCalcDialog::fillPhenomenaTableVis(QString phenomenType, double JD, QString firstObjectName, float firstObjectMagnitude,
+					    QString secondObjectName, float secondObjectMagnitude, QString separation, QString elongation,
+					    QString angularDistance, QString elongTooltip, QString angDistTooltip)
 {
 	ACPhenTreeWidgetItem* treeItem = new ACPhenTreeWidgetItem(ui->phenomenaTreeWidget);
 	treeItem->setText(PhenomenaType, phenomenType);
@@ -3456,7 +3581,19 @@ void AstroCalcDialog::fillPhenomenaTableVis(QString phenomenType, double JD, QSt
 	treeItem->setText(PhenomenaDate, QString("%1 %2").arg(localeMgr->getPrintableDateLocal(JD), localeMgr->getPrintableTimeLocal(JD)));
 	treeItem->setData(PhenomenaDate, Qt::UserRole, JD);
 	treeItem->setText(PhenomenaObject1, firstObjectName);
+	if (firstObjectMagnitude > 90.f)
+		treeItem->setText(PhenomenaMagnitude1, QChar(0x2014));
+	else
+		treeItem->setText(PhenomenaMagnitude1, QString::number(firstObjectMagnitude, 'f', 2));
+	treeItem->setTextAlignment(PhenomenaMagnitude1, Qt::AlignRight);
+	treeItem->setToolTip(PhenomenaMagnitude1, q_("Magnitude of first object"));
 	treeItem->setText(PhenomenaObject2, secondObjectName);
+	if (secondObjectMagnitude > 90.f)
+		treeItem->setText(PhenomenaMagnitude2, QChar(0x2014));
+	else
+		treeItem->setText(PhenomenaMagnitude2, QString::number(secondObjectMagnitude, 'f', 2));
+	treeItem->setToolTip(PhenomenaMagnitude2, q_("Magnitude of second object"));
+	treeItem->setTextAlignment(PhenomenaMagnitude2, Qt::AlignRight);	
 	treeItem->setText(PhenomenaSeparation, separation);
 	treeItem->setTextAlignment(PhenomenaSeparation, Qt::AlignRight);
 	treeItem->setText(PhenomenaElongation, elongation);
@@ -3473,7 +3610,7 @@ void AstroCalcDialog::fillPhenomenaTableVis(QString phenomenType, double JD, QSt
 	treeItem->setTextAlignment(PhenomenaAngularDistance, Qt::AlignRight);
 }
 
-void AstroCalcDialog::fillPhenomenaTable(const QMap<double, double> list, const PlanetP object1, const PlanetP object2, bool opposition)
+void AstroCalcDialog::fillPhenomenaTable(const QMap<double, double> list, const PlanetP object1, const PlanetP object2, int mode)
 {
 	QMap<double, double>::ConstIterator it;
 	QString dash = QChar(0x2014); // dash
@@ -3492,7 +3629,9 @@ void AstroCalcDialog::fillPhenomenaTable(const QMap<double, double> list, const 
 		bool occultation = false;
 		double s1 = object1->getSpheroidAngularSize(core);
 		double s2 = object2->getSpheroidAngularSize(core);
-		if (opposition)
+		double d1 = object1->getJ2000EquatorialPos(core).length();
+		double d2 = object2->getJ2000EquatorialPos(core).length();
+		if (mode==PhenomenaTypeIndex::Opposition) // opposition
 		{
 			phenomenType = q_("Opposition");
 			// Added a special case - lunar eclipse
@@ -3501,10 +3640,31 @@ void AstroCalcDialog::fillPhenomenaTable(const QMap<double, double> list, const 
 
 			separation = M_PI - separation;
 		}
+		else if (mode==PhenomenaTypeIndex::GreatestElongation) // greatest elongations
+		{
+			if (separation < 0.0) // we use negative value for eastern elongations!
+			{
+				separation *= -1.0;
+				phenomenType = q_("Greatest eastern elongation");
+			}
+			else
+				phenomenType = q_("Greatest western elongation");
+		}
+		else if (mode==PhenomenaTypeIndex::StationaryPoint) // stationary points
+		{
+			if (separation < 0.0) // we use negative value for start retrograde motion!
+			{
+				// TRANSLATORS: The planet are stand still in the equatorial coordinates
+				phenomenType = q_("Stationary (begin retrograde motion)");
+			}
+			else
+			{
+				// TRANSLATORS: The planet are stand still in the equatorial coordinates
+				phenomenType = q_("Stationary (begin prograde motion)");
+			}
+		}
 		else if (separation < (s2 * M_PI / 180.) || separation < (s1 * M_PI / 180.))
 		{
-			double d1 = object1->getJ2000EquatorialPos(core).length();
-			double d2 = object2->getJ2000EquatorialPos(core).length();
 			if ((d1 < d2 && s1 <= s2) || (d1 > d2 && s1 > s2))
 			{
 				// The passage of the celestial body in front of another of greater apparent diameter
@@ -3523,14 +3683,40 @@ void AstroCalcDialog::fillPhenomenaTable(const QMap<double, double> list, const 
 		{
 			phenomenType = q_("Eclipse");
 		}
+		else if (object1 == sun || object2 == sun) // this is may be superior of inferior conjuction for inner planet
+		{
+			double dcp = planet->getHeliocentricEclipticPos().length();
+			double dp;
+			if (object1 == sun)
+				dp = object2->getHeliocentricEclipticPos().length();
+			else
+				dp = object1->getHeliocentricEclipticPos().length();
+			if (dp < dcp) // OK, it's inner planet
+			{
+				if (object1 == sun)
+				{
+					if (d1<d2)
+						phenomenType = q_("Superior conjunction");
+					else
+						phenomenType = q_("Inferior conjunction");
+				}
+				else
+				{
+					if (d2<d1)
+						phenomenType = q_("Superior conjunction");
+					else
+						phenomenType = q_("Inferior conjunction");
+				}				
+			}
+		}
 
 		QString elongStr = "";
-		if ((object1 == sun || object2 == sun) && !opposition)
+		if (((object1 == sun || object2 == sun) && mode==PhenomenaTypeIndex::Conjuction) || (object2 == sun && mode==PhenomenaTypeIndex::Opposition))
 			elongStr = dash;
 		else
 		{
 			double elongation = object1->getElongation(core->getObserverHeliocentricEclipticPos());
-			if (opposition) // calculate elongation for the second object in this case!
+			if (mode==PhenomenaTypeIndex::Opposition) // calculate elongation for the second object in this case!
 				elongation = object2->getElongation(core->getObserverHeliocentricEclipticPos());
 
 			if (withDecimalDegree)
@@ -3549,7 +3735,7 @@ void AstroCalcDialog::fillPhenomenaTable(const QMap<double, double> list, const 
 			else
 			{
 				double angularDistance = object1->getJ2000EquatorialPos(core).angle(moon->getJ2000EquatorialPos(core));
-				if (opposition) // calculate elongation for the second object in this case!
+				if (mode==1) // calculate elongation for the second object in this case!
 					angularDistance = object2->getJ2000EquatorialPos(core).angle(moon->getJ2000EquatorialPos(core));
 
 				if (withDecimalDegree)
@@ -3561,22 +3747,33 @@ void AstroCalcDialog::fillPhenomenaTable(const QMap<double, double> list, const 
 
 		QString elongationInfo = q_("Angular distance from the Sun");
 		QString angularDistanceInfo = q_("Angular distance from the Moon");
-		if (opposition)
+		if (mode==1)
 		{
 			elongationInfo = q_("Angular distance from the Sun for second object");
 			angularDistanceInfo = q_("Angular distance from the Moon for second object");
 		}
 
 		QString separationStr = dash;
+		float magnitude = object2->getVMagnitude(core);
 		if (!occultation)
-		{
+		{			
 			if (withDecimalDegree)
 				separationStr = StelUtils::radToDecDegStr(separation, 5, false, true);
 			else
 				separationStr = StelUtils::radToDmsStr(separation, true);
 		}
+		else
+			magnitude = 99.f; // Let's hide obviously wrong data
 
-		fillPhenomenaTableVis(phenomenType, it.key(), object1->getNameI18n(), object2->getNameI18n(), separationStr, elongStr, angDistStr, elongationInfo, angularDistanceInfo);
+		QString nameObj2 = object2->getNameI18n();
+		if (mode==PhenomenaTypeIndex::StationaryPoint)
+		{
+			nameObj2 = dash;
+			magnitude = 99.f;
+			separationStr = dash;
+		}
+
+		fillPhenomenaTableVis(phenomenType, it.key(), object1->getNameI18n(), object1->getVMagnitude(core), nameObj2, magnitude, separationStr, elongStr, angDistStr, elongationInfo, angularDistanceInfo);
 	}
 }
 
@@ -3636,6 +3833,7 @@ void AstroCalcDialog::fillPhenomenaTable(const QMap<double, double> list, const 
 			commonName = object2->getDSODesignation();
 
 		QString separationStr = dash;
+		float magnitude = object2->getVMagnitude(core);
 		if (!occultation)
 		{
 			if (withDecimalDegree)
@@ -3643,12 +3841,14 @@ void AstroCalcDialog::fillPhenomenaTable(const QMap<double, double> list, const 
 			else
 				separationStr = StelUtils::radToDmsStr(separation, true);
 		}
+		else
+			magnitude = 99.f; // Let's hide obviously wrong data
 
-		fillPhenomenaTableVis(phenomenType, it.key(), object1->getNameI18n(), commonName, separationStr, elongStr, angDistStr);
+		fillPhenomenaTableVis(phenomenType, it.key(), object1->getNameI18n(), object1->getVMagnitude(core), commonName, magnitude, separationStr, elongStr, angDistStr);
 	}
 }
 
-void AstroCalcDialog::fillPhenomenaTable(const QMap<double, double> list, const PlanetP object1, const StelObjectP object2, bool opposition = false)
+void AstroCalcDialog::fillPhenomenaTable(const QMap<double, double> list, const PlanetP object1, const StelObjectP object2, int mode = 0)
 {
 	QMap<double, double>::ConstIterator it;
 	QString dash = QChar(0x2014); // dash
@@ -3667,7 +3867,9 @@ void AstroCalcDialog::fillPhenomenaTable(const QMap<double, double> list, const 
 		bool occultation = false;		
 		double s1 = object1->getSpheroidAngularSize(core);
 		double s2 = object2->getAngularSize(core);
-		if (opposition)
+		double d1 = object1->getJ2000EquatorialPos(core).length();
+		double d2 = object2->getJ2000EquatorialPos(core).length();
+		if (mode==PhenomenaTypeIndex::Opposition)
 		{
 			phenomenType = q_("Opposition");
 			// Added a special case - lunar eclipse
@@ -3678,8 +3880,6 @@ void AstroCalcDialog::fillPhenomenaTable(const QMap<double, double> list, const 
 		}
 		else if (separation < (s2 * M_PI / 180.) || separation < (s1 * M_PI / 180.))
 		{
-			double d1 = object1->getJ2000EquatorialPos(core).length();
-			double d2 = object2->getJ2000EquatorialPos(core).length();
 			if ((d1 < d2 && s1 <= s2) || (d1 > d2 && s1 > s2))
 			{
 				// The passage of the celestial body in front of another of greater apparent diameter
@@ -3698,7 +3898,32 @@ void AstroCalcDialog::fillPhenomenaTable(const QMap<double, double> list, const 
 		{
 			phenomenType = q_("Eclipse");
 		}
-
+		else if (object1 == sun || object2 == sun) // this is may be superior of inferior conjuction for inner planet
+		{
+			double dcp = (planet->getEquinoxEquatorialPos(core) - sun->getEquinoxEquatorialPos(core)).length();
+			double dp;
+			if (object1 == sun)
+				dp = (object2->getEquinoxEquatorialPos(core) - sun->getEquinoxEquatorialPos(core)).length();
+			else
+				dp = (object1->getEquinoxEquatorialPos(core) - sun->getEquinoxEquatorialPos(core)).length();
+			if (dp < dcp) // OK, it's inner planet
+			{
+				if (object1 == sun)
+				{
+					if (d1<d2)
+						phenomenType = q_("Superior conjunction");
+					else
+						phenomenType = q_("Inferior conjunction");
+				}
+				else
+				{
+					if (d2<d1)
+						phenomenType = q_("Superior conjunction");
+					else
+						phenomenType = q_("Inferior conjunction");
+				}
+			}
+		}
 
 		QString elongStr = "";
 		if (object1 == sun)
@@ -3733,6 +3958,7 @@ void AstroCalcDialog::fillPhenomenaTable(const QMap<double, double> list, const 
 			commonName = object2->getID();
 
 		QString separationStr = dash;
+		float magnitude = object2->getVMagnitude(core);
 		if (!occultation)
 		{
 			if (withDecimalDegree)
@@ -3740,55 +3966,54 @@ void AstroCalcDialog::fillPhenomenaTable(const QMap<double, double> list, const 
 			else
 				separationStr = StelUtils::radToDmsStr(separation, true);
 		}
+		else
+			magnitude = 99.f; // Let's hide obviously wrong data
 
-		fillPhenomenaTableVis(phenomenType, it.key(), object1->getNameI18n(), commonName, separationStr, elongStr, angDistStr);
+		fillPhenomenaTableVis(phenomenType, it.key(), object1->getNameI18n(), object1->getVMagnitude(core), commonName, magnitude, separationStr, elongStr, angDistStr);
 	}
 }
 
-QMap<double, double> AstroCalcDialog::findClosestApproach(PlanetP& object1, StelObjectP& object2, double startJD, double stopJD, double maxSeparation, bool opposition)
+double AstroCalcDialog::findInitialStep(double startJD, double stopJD, QStringList objects)
+{
+	double step = (stopJD - startJD) / 8.0;
+	double limit = 24.8 * 365.25;
+
+	if (objects.contains("Neptune", Qt::CaseInsensitive) || objects.contains("Uranus", Qt::CaseInsensitive))
+		limit = 1811.25;
+	else if (objects.contains("Jupiter", Qt::CaseInsensitive) || objects.contains("Saturn", Qt::CaseInsensitive))
+		limit = 181.125;
+	else if (objects.contains("Mars",Qt::CaseInsensitive))
+		limit = 5.;
+	else if (objects.contains("Venus",Qt::CaseInsensitive) || objects.contains("Mercury", Qt::CaseInsensitive))
+		limit = 2.5;
+	else if (objects.contains("Moon", Qt::CaseInsensitive) || objects.contains("Sun", Qt::CaseInsensitive))
+		limit = 0.25;
+
+	if (step > limit)
+		step = limit;
+
+	return step;
+}
+
+QMap<double, double> AstroCalcDialog::findClosestApproach(PlanetP& object1, StelObjectP& object2, double startJD, double stopJD, double maxSeparation, int mode)
 {
 	double dist, prevDist, step, step0;
 	int sgn, prevSgn = 0;
 	QMap<double, double> separations;
 	QPair<double, double> extremum;
 
-	step0 = (stopJD - startJD) / 8.0;
-	if (step0 > 24.8 * 365.25)
-		step0 = 24.8 * 365.25;
-
-	if (object1->getEnglishName() == "Neptune" || object1->getEnglishName() == "Uranus" || object2->getEnglishName() == "Neptune" || object2->getEnglishName() == "Uranus")
-	{
-		if (step0 > 1811.25)
-			step0 = 1811.25;
-	}
-	if (object1->getEnglishName() == "Jupiter" || object1->getEnglishName() == "Saturn" || object2->getEnglishName() == "Jupiter" || object2->getEnglishName() == "Saturn")
-	{
-		if (step0 > 181.125)
-			step0 = 181.125;
-	}
-	if (object1->getEnglishName() == "Mars" || object2->getEnglishName() == "Mars")
-	{
-		if (step0 > 5.)
-			step0 = 5.0;
-	}
-	if (object1->getEnglishName() == "Venus" || object1->getEnglishName() == "Mercury" || object2->getEnglishName() == "Venus" || object2->getEnglishName() == "Mercury")
-	{
-		if (step0 > 2.5)
-			step0 = 2.5;
-	}
-	if (object1->getEnglishName() == "Moon" || object1->getEnglishName() == "Sun" || object2->getEnglishName() == "Moon" || object2->getEnglishName() == "Sun")
-	{
-		if (step0 > 0.25)
-			step0 = 0.25;
-	}
-
+	QStringList objects;
+	objects.clear();
+	objects.append(object1->getEnglishName());
+	objects.append(object2->getEnglishName());
+	step0 = findInitialStep(startJD, stopJD, objects);
 	step = step0;
 	double jd = startJD;
-	prevDist = findDistance(jd, object1, object2, opposition);
+	prevDist = findDistance(jd, object1, object2, mode);
 	jd += step;
 	while (jd <= stopJD)
 	{
-		dist = findDistance(jd, object1, object2, opposition);
+		dist = findDistance(jd, object1, object2, mode);
 		sgn = StelUtils::sign(dist - prevDist);
 
 		double factor = qAbs((dist - prevDist) / dist);
@@ -3806,7 +4031,7 @@ QMap<double, double> AstroCalcDialog::findClosestApproach(PlanetP& object1, Stel
 				sgn = prevSgn;
 				while (jd <= stopJD)
 				{
-					dist = findDistance(jd, object1, object2, opposition);
+					dist = findDistance(jd, object1, object2, mode);
 					sgn = StelUtils::sign(dist - prevDist);
 					if (sgn != prevSgn)
 						break;
@@ -3817,7 +4042,7 @@ QMap<double, double> AstroCalcDialog::findClosestApproach(PlanetP& object1, Stel
 				}
 			}
 
-			if (findPrecise(&extremum, object1, object2, jd, step, sgn, opposition))
+			if (findPrecise(&extremum, object1, object2, jd, step, sgn, mode))
 			{
 				double sep = extremum.second * 180. / M_PI;
 				if (sep < maxSeparation)
@@ -3829,11 +4054,10 @@ QMap<double, double> AstroCalcDialog::findClosestApproach(PlanetP& object1, Stel
 		prevSgn = sgn;
 		jd += step;
 	}
-
 	return separations;
 }
 
-bool AstroCalcDialog::findPrecise(QPair<double, double>* out, PlanetP object1, StelObjectP object2, double JD, double step, int prevSign, bool opposition)
+bool AstroCalcDialog::findPrecise(QPair<double, double>* out, PlanetP object1, StelObjectP object2, double JD, double step, int prevSign, int mode)
 {
 	int sgn;
 	double dist, prevDist;
@@ -3841,20 +4065,20 @@ bool AstroCalcDialog::findPrecise(QPair<double, double>* out, PlanetP object1, S
 	if (out == Q_NULLPTR)
 		return false;
 
-	prevDist = findDistance(JD, object1, object2, opposition);
+	prevDist = findDistance(JD, object1, object2, mode);
 	step = -step / 2.;
 	prevSign = -prevSign;
 
 	while (true)
 	{
 		JD += step;
-		dist = findDistance(JD, object1, object2, opposition);
+		dist = findDistance(JD, object1, object2, mode);
 
 		if (qAbs(step) < 1. / 1440.)
 		{
 			out->first = JD - step / 2.0;
-			out->second = findDistance(JD - step / 2.0, object1, object2, opposition);
-			if (out->second < findDistance(JD - 5.0, object1, object2, opposition))
+			out->second = findDistance(JD - step / 2.0, object1, object2, mode);
+			if (out->second < findDistance(JD - 5.0, object1, object2, mode))
 				return true;
 			else
 				return false;
@@ -3870,16 +4094,264 @@ bool AstroCalcDialog::findPrecise(QPair<double, double>* out, PlanetP object1, S
 	}
 }
 
-double AstroCalcDialog::findDistance(double JD, PlanetP object1, StelObjectP object2, bool opposition)
+double AstroCalcDialog::findDistance(double JD, PlanetP object1, StelObjectP object2, int mode)
 {
 	core->setJD(JD);
 	core->update(0);
-	Vec3d obj1 = object1->getJ2000EquatorialPos(core);
-	Vec3d obj2 = object2->getJ2000EquatorialPos(core);
-	double angle = obj1.angle(obj2);
-	if (opposition)
-		angle = M_PI - angle;
+	double angle = object1->getJ2000EquatorialPos(core).angle(object2->getJ2000EquatorialPos(core));
+	if (mode==PhenomenaTypeIndex::Opposition)
+		angle = M_PI - angle;	
 	return angle;
+}
+
+QMap<double, double> AstroCalcDialog::findGreatestElongationApproach(PlanetP& object1, StelObjectP& object2, double startJD, double stopJD)
+{
+	double dist, prevDist, step, step0;
+	QMap<double, double> separations;
+	QPair<double, double> extremum;
+
+	QStringList objects;
+	objects.clear();
+	objects.append(object1->getEnglishName());
+	objects.append(object2->getEnglishName());
+	step0 = findInitialStep(startJD, stopJD, objects);
+	step = step0;
+	double jd = startJD;
+	prevDist = findDistance(jd, object1, object2, PhenomenaTypeIndex::Conjuction);
+	jd += step;
+	while (jd <= stopJD)
+	{
+		dist = findDistance(jd, object1, object2, PhenomenaTypeIndex::Conjuction);
+		double factor = qAbs((dist - prevDist) / dist);
+		if (factor > 10.)
+			step = step0 * factor / 10.;
+		else
+			step = step0;
+
+		if (dist>prevDist)
+		{
+			if (step > step0)
+			{
+				jd -= step;
+				step = step0;
+				while (jd <= stopJD)
+				{
+					dist = findDistance(jd, object1, object2, PhenomenaTypeIndex::Conjuction);
+					if (dist<prevDist)
+						break;
+
+					prevDist = dist;
+					jd += step;
+				}
+			}
+
+			if (findPreciseGreatestElongation(&extremum, object1, object2, jd, stopJD, step))
+			{
+				separations.insert(extremum.first, extremum.second);
+			}
+		}
+
+		prevDist = dist;
+		jd += step;
+	}
+	return separations;
+}
+
+bool AstroCalcDialog::findPreciseGreatestElongation(QPair<double, double>* out, PlanetP object1, StelObjectP object2, double JD, double stopJD, double step)
+{
+	double dist, prevDist;
+
+	if (out == Q_NULLPTR)
+		return false;
+
+	prevDist = findDistance(JD, object1, object2, PhenomenaTypeIndex::Conjuction);
+	step = -step / 2.;
+
+	while (true)
+	{
+		JD += step;
+		dist = findDistance(JD, object1, object2, PhenomenaTypeIndex::Conjuction);
+
+		if (qAbs(step) < 1. / 1440.)
+		{
+			out->first = JD - step / 2.0;
+			out->second = findDistance(JD - step / 2.0, object1, object2, PhenomenaTypeIndex::Conjuction);
+			if (out->second > findDistance(JD - 5.0, object1, object2, PhenomenaTypeIndex::Conjuction))
+			{
+				if (object1->getJ2000EquatorialPos(core).longitude()>object2->getJ2000EquatorialPos(core).longitude())
+					out->second *= -1.0; // let's use negative value for eastern elongations
+				return true;
+			}
+			else
+				return false;
+		}
+		if (dist<prevDist)
+		{
+			step = -step / 2.0;
+		}
+		prevDist = dist;
+
+		if (JD > stopJD)
+			return false;
+	}
+}
+
+QMap<double, double> AstroCalcDialog::findStationaryPointApproach(PlanetP &object1, double startJD, double stopJD)
+{
+	double RA, prevRA, step, step0;
+	QMap<double, double> separations;
+	QPair<double, double> extremum;
+
+	QStringList objects;
+	objects.clear();
+	objects.append(object1->getEnglishName());
+	step0 = findInitialStep(startJD, stopJD, objects);
+	step = step0;
+	double jd = startJD;
+	prevRA = findRightAscension(jd, object1);
+	jd += step;
+	while (jd <= stopJD)
+	{
+		RA = findRightAscension(jd, object1);
+		double factor = qAbs((RA - prevRA) / RA);
+		if (factor > 10.)
+			step = step0 * factor / 10.;
+		else
+			step = step0;
+
+		if (RA>prevRA && qAbs(RA - prevRA)<180.)
+		{
+			if (step > step0)
+			{
+				jd -= step;
+				step = step0;
+				while (jd <= stopJD)
+				{
+					RA = findRightAscension(jd, object1);
+					if (RA<prevRA)
+						break;
+
+					prevRA = RA;
+					jd += step;
+				}
+			}
+
+			if (findPreciseStationaryPoint(&extremum, object1, jd, stopJD, step, true))
+			{
+				separations.insert(extremum.first, extremum.second);
+			}
+		}
+		prevRA = RA;
+		jd += step;
+	}
+
+	step0 = findInitialStep(startJD, stopJD, objects);
+	step = step0;
+	jd = startJD;
+	prevRA = findRightAscension(jd, object1);
+	jd += step;
+	while (jd <= stopJD)
+	{
+		RA = findRightAscension(jd, object1);
+		double factor = qAbs((RA - prevRA) / RA);
+		if (factor > 10.)
+			step = step0 * factor / 10.;
+		else
+			step = step0;
+
+		if (RA<prevRA && qAbs(RA - prevRA)<180.)
+		{
+			if (step > step0)
+			{
+				jd -= step;
+				step = step0;
+				while (jd <= stopJD)
+				{
+					RA = findRightAscension(jd, object1);
+					if (RA>prevRA)
+						break;
+
+					prevRA = RA;
+					jd += step;
+				}
+			}
+
+			if (findPreciseStationaryPoint(&extremum, object1, jd, stopJD, step, false))
+			{
+				separations.insert(extremum.first, extremum.second);
+			}
+		}
+		prevRA = RA;
+		jd += step;
+	}
+
+	return separations;
+}
+
+bool AstroCalcDialog::findPreciseStationaryPoint(QPair<double, double> *out, PlanetP object, double JD, double stopJD, double step, bool retrograde)
+{
+	double RA, prevRA;
+
+	if (out == Q_NULLPTR)
+		return false;
+
+	prevRA = findRightAscension(JD, object);
+	step = -step / 2.;
+
+	while (true)
+	{
+		JD += step;
+		RA = findRightAscension(JD, object);
+
+		if (qAbs(step) < 1. / 1440.)
+		{
+			out->first = JD - step / 2.0;
+			out->second = findRightAscension(JD - step / 2.0, object);
+			if (retrograde) // begin retrograde motion
+			{
+				if (out->second > findRightAscension(JD - 5.0, object))
+				{
+					out->second = -1.0;
+					return true;
+				}
+				else
+					return false;
+			}
+			else
+			{
+				if (out->second < findRightAscension(JD - 5.0, object))
+				{
+					out->second = 1.0;
+					return true;
+				}
+				else
+					return false;
+			}
+		}
+		if (retrograde)
+		{
+			if (RA<prevRA)
+				step = -step / 2.0;
+		}
+		else
+		{
+			if (RA>prevRA)
+				step = -step / 2.0;
+		}
+		prevRA = RA;
+
+		if (JD > stopJD)
+			return false;
+	}
+}
+
+double AstroCalcDialog::findRightAscension(double JD, PlanetP object)
+{
+	core->setJD(JD);
+	core->update(0);
+	double ra, dec;
+	StelUtils::rectToSphe(&ra, &dec, object->getJ2000EquatorialPos(core));
+	return ra*M_180_PI;
 }
 
 void AstroCalcDialog::changePage(QListWidgetItem* current, QListWidgetItem* previous)

@@ -239,6 +239,8 @@ SET(stellarium_lib_SRCS
      core/modules/ZoneData.hpp
      StelMainView.hpp
      StelMainView.cpp
+     StelSplashScreen.hpp
+     StelSplashScreen.cpp
      StelLogger.hpp
      StelLogger.cpp
      CLIProcessor.hpp
@@ -331,6 +333,8 @@ IF(STELLARIUM_GUI_MODE STREQUAL "Standard")
           gui/CustomDeltaTEquationDialog.cpp
           gui/AstroCalcDialog.hpp
           gui/AstroCalcDialog.cpp
+          gui/AstroCalcExtraEphemerisDialog.hpp
+          gui/AstroCalcExtraEphemerisDialog.cpp
           gui/BookmarksDialog.hpp
           gui/BookmarksDialog.cpp
           gui/StelDialog.hpp
@@ -351,6 +355,7 @@ IF(STELLARIUM_GUI_MODE STREQUAL "Standard")
           gui/greatRedSpotDialog.ui
           gui/customDeltaTEquationDialog.ui
           gui/astroCalcDialog.ui
+          gui/astroCalcExtraEphemerisDialog.ui
           gui/bookmarksDialog.ui
           gui/addRemoveLandscapesDialog.ui
           gui/dsoColorsDialog.ui
@@ -491,7 +496,31 @@ IF(MSVC)
      )
 ENDIF(MSVC)
 
-INSTALL(TARGETS stellarium DESTINATION bin)
+IF(APPLE)
+     INSTALL(TARGETS stellarium DESTINATION MacOS)
+     INSTALL(CODE
+        "
+         EXECUTE_PROCESS(
+             COMMAND \"${MACDEPLOYQT_COMMAND}\"
+                     \"\${CMAKE_CURRENT_BINARY_DIR}/Stellarium.app\"
+             WORKING_DIRECTORY \"\${CMAKE_CURRENT_BINARY_DIR}\"
+             OUTPUT_FILE \"\${CMAKE_CURRENT_BINARY_DIR}/macdeployqt.log\"
+             ERROR_FILE \"\${CMAKE_CURRENT_BINARY_DIR}/macdeployqt.err\"
+         )
+         MESSAGE(\"Running macdeployqt...\")
+        "
+     )
+    INSTALL(CODE
+        "
+        EXECUTE_PROCESS(
+             COMMAND \"../../util/macfix.sh\"
+        )
+        MESSAGE(\"Fixing Qt' paths for macOS bundle...\")
+        "
+     )
+ELSE()
+     INSTALL(TARGETS stellarium DESTINATION bin)
+ENDIF()
 IF(WIN32)
      INSTALL(CODE
         "

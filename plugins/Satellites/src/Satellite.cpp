@@ -916,7 +916,7 @@ void Satellite::draw(StelCore* core, StelPainter& painter)
 
 	XYZ = getJ2000EquatorialPos(core);
 	// NOTE: Should we use the real angular size of ISS here (we do not have linear size of ISS within catalog for calculation the angular size)?
-	int screenSizeISS = (int)((0.0167*M_PI/180.)*painter.getProjector()->getPixelPerRadAtCenter()); // Set screen size of ISS (1 arcmin)
+	int screenSizeISS = static_cast<int>((0.0167*M_PI/180.)*painter.getProjector()->getPixelPerRadAtCenter()); // Set screen size of ISS (1 arcmin)
 
 	Vec3d win;
 	if (painter.getProjector()->projectCheck(XYZ, win))
@@ -955,7 +955,7 @@ void Satellite::draw(StelCore* core, StelPainter& painter)
 				painter.drawText(XYZ, name, 0, 10, 10, false);
 
 			// Special case: crossing of the ISS of the Moon or the Sun
-			if (isISS && screenSizeISS>0 && (XYZ.angle(moon->getJ2000EquatorialPos(core))*180./M_PI <= moon->getSpheroidAngularSize(core) || XYZ.angle(sun->getJ2000EquatorialPos(core))*180./M_PI <= sun->getSpheroidAngularSize(core)))
+			if (isISS && screenSizeISS>0 && (XYZ.angle(moon->getJ2000EquatorialPos(core))*M_180_PI <= moon->getSpheroidAngularSize(core) || XYZ.angle(sun->getJ2000EquatorialPos(core))*M_180_PI <= sun->getSpheroidAngularSize(core)))
 			{
 				Vec3f issColor = Vec3f(0.f,0.f,0.f);
 				painter.setColor(issColor[0], issColor[1], issColor[2], 1.f);
@@ -1063,7 +1063,7 @@ void Satellite::computeOrbitPoints()
 	{
 		// compute next orbit point when clock runs forward
 		gTimeSpan diffTime = epoch - lastEpochComp;
-		diffSlots          = (int)(diffTime.getDblSeconds()/orbitLineSegmentDuration);
+		diffSlots          = static_cast<int>(diffTime.getDblSeconds()/orbitLineSegmentDuration);
 
 		if (diffSlots > 0)
 		{
@@ -1096,7 +1096,7 @@ void Satellite::computeOrbitPoints()
 	{
 		// compute next orbit point when clock runs backward
 		gTimeSpan diffTime = lastEpochComp - epoch;
-		diffSlots          = (int)(diffTime.getDblSeconds()/orbitLineSegmentDuration);
+		diffSlots          = static_cast<int>(diffTime.getDblSeconds()/orbitLineSegmentDuration);
 
 		if (diffSlots > 0)
 		{

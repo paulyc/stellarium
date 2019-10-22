@@ -127,6 +127,14 @@ void SatellitesDialog::createDialogContent()
 	acEndl="\n";
 #endif
 
+	// Set symbols on buttons
+	ui->addSatellitesButton->setText(QChar(0x2795)); // Heavy plus symbol
+	ui->removeSatellitesButton->setText(QChar(0x2796)); // Heavy minus symbol
+	ui->satColorPickerButton->setText(QChar(0x2740)); // Florette symbol
+	ui->saveSatellitesButton->setText(QString());
+	ui->addSourceButton->setText(QChar(0x2795)); // Heavy plus symbol
+	ui->deleteSourceButton->setText(QChar(0x2796)); // Heavy minus symbol
+
 	// Settings tab / updates group
 	// These controls are refreshed by updateSettingsPage(), which in
 	// turn is triggered by setting any of these values. Because
@@ -151,6 +159,7 @@ void SatellitesDialog::createDialogContent()
 	connect(ui->fontSizeSpinBox,       SIGNAL(valueChanged(int)), plugin, SLOT(setLabelFontSize(int)));
 	connect(ui->restoreDefaultsButton, SIGNAL(clicked()),         this,   SLOT(restoreDefaults()));
 	connect(ui->saveSettingsButton,    SIGNAL(clicked()),         this,   SLOT(saveSettings()));
+	connect(StelApp::getInstance().getCore(), SIGNAL(configurationDataSaved()), this, SLOT(saveSettings()));
 
 	// Settings tab / realistic mode group
 	connect(ui->realisticGroup,          SIGNAL(clicked(bool)), this,   SLOT(setFlagRealisticMode(bool)));
@@ -177,12 +186,10 @@ void SatellitesDialog::createDialogContent()
 	connect(clearAction, SIGNAL(triggered()), this, SLOT(searchSatellitesClear()));
 
 	QItemSelectionModel* selectionModel = ui->satellitesList->selectionModel();
-	connect(selectionModel,
-		SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
-		this,
-		SLOT(updateSatelliteData()));
+	connect(selectionModel, SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
+		     this, SLOT(updateSatelliteData()));
 	connect(ui->satellitesList, SIGNAL(doubleClicked(QModelIndex)),
-		this, SLOT(trackSatellite(QModelIndex)));
+		     this, SLOT(trackSatellite(QModelIndex)));
 
 	// Two-state input, three-state display
 	connect(ui->displayedCheckbox, SIGNAL(clicked(bool)), ui->displayedCheckbox, SLOT(setChecked(bool)));
@@ -200,7 +207,7 @@ void SatellitesDialog::createDialogContent()
 
 
 	connect(ui->groupsListWidget, SIGNAL(itemChanged(QListWidgetItem*)),
-		this, SLOT(handleGroupChanges(QListWidgetItem*)));
+		     this, SLOT(handleGroupChanges(QListWidgetItem*)));
 
 	connect(ui->groupFilterCombo,       SIGNAL(currentIndexChanged(int)), this, SLOT(filterListByGroup(int)));
 	connect(ui->saveSatellitesButton,   SIGNAL(clicked()),                this, SLOT(saveSatellites()));
@@ -233,8 +240,6 @@ void SatellitesDialog::createDialogContent()
 	connect(ui->predictIridiumFlaresPushButton, SIGNAL(clicked()), this, SLOT(predictIridiumFlares()));
 	connect(ui->predictedIridiumFlaresSaveButton, SIGNAL(clicked()), this, SLOT(savePredictedIridiumFlares()));
 	connect(ui->iridiumFlaresTreeWidget, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(selectCurrentIridiumFlare(QModelIndex)));
-
-	ui->satColorPickerButton->setFixedSize(QSize(18, 18));
 }
 
 // for now, the color picker changes hintColor AND orbitColor at once
@@ -541,9 +546,6 @@ void SatellitesDialog::updateSatelliteData()
 
 	// bug #1350669 (https://bugs.launchpad.net/stellarium/+bug/1350669)
 	ui->satellitesList->repaint();
-
-	// TODO: Fix the comms button...
-//	ui->commsButton->setEnabled(sat->comms.count()>0);
 
 	// Things that are cumulative in a multi-selection
 	GroupSet globalGroups = GETSTELMODULE(Satellites)->getGroups();

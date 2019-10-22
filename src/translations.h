@@ -423,6 +423,10 @@ class Translations
 		N_("Abell Catalog of Planetary Nebulae");
 		// TRANSLATORS: Catalogue of objects (for "Lists" in the search tool)
 		N_("ESO/Uppsala Survey of the ESO(B) Atlas")
+		// TRANSLATORS: Catalogue of objects (for "Lists" in the search tool)
+		N_("Catalogue of southern stars embedded in nebulosity")
+		// TRANSLATORS: Catalogue of objects (for "Lists" in the search tool)
+		N_("Catalogue and distances of optically visible H II regions")
 		// TRANSLATORS: Type of objects (for "Lists" in the search tool)
 		N_("Dwarf galaxies");
 		// TRANSLATORS: Catalogue of objects (for "Lists" in the search tool)
@@ -447,6 +451,8 @@ class Translations
 		
 		// =====================================================================
 		// Constellation cultures
+		// TRANSLATORS: Name of the sky culture
+		N_("Anutan");
 		// TRANSLATORS: Name of the sky culture
 		N_("Arabic");
 		// TRANSLATORS: Name of the sky culture
@@ -527,6 +533,8 @@ class Translations
 		N_("Babylonian (Seleucid)");
 		// TRANSLATORS: Name of the sky culture and landscape
 		N_("Armintxe Cave");
+		// TRANSLATORS: Name of the sky culture
+		N_("Vanuatu (Netwar)");
 		
 		// =====================================================================
 		// Landscape names
@@ -660,6 +668,8 @@ class Translations
 		N_("Saturnian analemma");
 		// TRANSLATORS: Name of script
 		N_("Uranian analemma");
+		// TRANSLATORS: Name of script
+		N_("Messier Marathon");
 		
 		// =====================================================================
 		// Script descriptions
@@ -707,6 +717,7 @@ class Translations
 		N_("A demonstration of the analemma - the path of the Sun across the sky during the year on Mars.");
 		N_("A demonstration of the analemma - the path of the Sun across the sky during the year on Saturn.");
 		N_("A demonstration of the analemma - the path of the Sun across the sky during the year on Uranus.");
+		N_("Messier Marathon on March 20, 2020. The data for the script are taken from GaoXing's observation log: http://www.xjltp.com/2_huodong/2_030301.htm");
 		
 		// =====================================================================
 		// List of GUI elements (Qt's dialogs)

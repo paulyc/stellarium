@@ -22,6 +22,7 @@
 #include <QFileDialog>
 
 #include "StelApp.hpp"
+#include "StelCore.hpp"
 #include "ui_ObservabilityDialog.h"
 #include "ObservabilityDialog.hpp"
 #include "Observability.hpp"
@@ -118,6 +119,7 @@ void ObservabilityDialog::createDialogContent()
 	        this, SLOT(updateControls()));
 	connect(ui->saveSettingsButton, SIGNAL(clicked()),
 	        plugin, SLOT(saveConfiguration()));
+	connect(StelApp::getInstance().getCore(), SIGNAL(configurationDataSaved()), plugin, SLOT(saveConfiguration()));
 
 	// About tab
 	setAboutHtml();
@@ -167,9 +169,9 @@ void ObservabilityDialog::updateControls()
 //	ui->SuperMoon->setChecked(GETSTELMODULE(Observability)->getShowFlags(7));
 
 	Vec3f fontColor = plugin->getFontColor();
-	int red = (int)(100.*fontColor[0]);
-	int green = (int)(100.*fontColor[1]);
-	int blue = (int)(100.*fontColor[2]);
+	int red = static_cast<int>(100.*fontColor[0]);
+	int green = static_cast<int>(100.*fontColor[1]);
+	int blue = static_cast<int>(100.*fontColor[2]);
 	ui->redSlider->setValue(red);
 	ui->greenSlider->setValue(green);
 	ui->blueSlider->setValue(blue);

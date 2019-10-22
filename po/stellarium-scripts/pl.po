@@ -6,15 +6,16 @@
 # Translators:
 # Dariia Smolenchenko <daria.smol.r@icloud.com>, 2019
 # Marcin Polaris <astronoce@gmail.com>, 2019
+# Paweł Zienowicz <pawel.zienowicz@nask.pl>, 2019
 # 
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: stellarium@googlegroups.com\n"
-"POT-Creation-Date: 2019-06-26 17:35+0600\n"
+"POT-Creation-Date: 2019-09-29 16:13+0700\n"
 "PO-Revision-Date: 2019-01-19 14:25+0000\n"
-"Last-Translator: Marcin Polaris <astronoce@gmail.com>, 2019\n"
+"Last-Translator: Paweł Zienowicz <pawel.zienowicz@nask.pl>, 2019\n"
 "Language-Team: Polish (https://www.transifex.com/stellarium/teams/80998/pl/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -24,24 +25,24 @@ msgstr ""
 
 #: scripts/analemma.ssc:15
 msgid "Analemma"
-msgstr ""
+msgstr "Analemma"
 
 #: scripts/analemma.ssc:40
 msgid "Week"
-msgstr ""
+msgstr "Tydzień"
 
 #: scripts/analemma.ssc:46
 msgid "Near winter solstice"
-msgstr ""
+msgstr "W okolicach przesilenia zimowego"
 
 #: scripts/analemma.ssc:50
 msgid "Near summer solstice"
-msgstr ""
+msgstr "W okolicach przesilenia letniego"
 
 #: scripts/analemma.ssc:54 scripts/martian_analemma.ssc:47
 #: scripts/saturnian_analemma.ssc:47 scripts/uranian_analemma.ssc:47
 msgid "Yearly path of the Sun"
-msgstr ""
+msgstr "Linia zakreślana przez Słońce w ciągu roku"
 
 #: scripts/bennett.ssc:47
 msgid "The Jack Bennett Catalog of Southern Deep-Sky Objects"
@@ -49,7 +50,7 @@ msgstr "Katalog Jacka Bennetta obiektów głębokiego nieba półkuli południow
 
 #: scripts/bennett.ssc:48 scripts/best_ngc.ssc:27 scripts/binosky.ssc:20
 msgid "objects in all"
-msgstr ""
+msgstr "obiekty w ogóle"
 
 #: scripts/best_ngc.ssc:26
 msgid "Best objects in the New General Catalog"
@@ -89,11 +90,11 @@ msgstr "Asocjacja Alfa Persei"
 
 #: scripts/binocular_highlights.ssc:16
 msgid "M34: A True Binocular Cluster"
-msgstr ""
+msgstr "M34: Prawdziwa galaktyka widziana przez lornetkę"
 
 #: scripts/binocular_highlights.ssc:17
 msgid "Watching the Demon Star"
-msgstr ""
+msgstr "Obserwacja Głowy Diabła (Algol)"
 
 #: scripts/binocular_highlights.ssc:18
 msgid "The Pleiades"
@@ -101,15 +102,15 @@ msgstr "Plejady"
 
 #: scripts/binocular_highlights.ssc:19
 msgid "Corralling the Hyades"
-msgstr ""
+msgstr "Corralling the Hyades"
 
 #: scripts/binocular_highlights.ssc:20
 msgid "NGC 1647: The Crab Cluster"
-msgstr ""
+msgstr "NGC 1647: gromada otwarta"
 
 #: scripts/binocular_highlights.ssc:21
 msgid "Messier's Number One"
-msgstr ""
+msgstr "Numer jeden u Messiera"
 
 #: scripts/binocular_highlights.ssc:22
 msgid "Auriga's Messier Clusters"
@@ -133,7 +134,7 @@ msgstr "Złota Betelgeza"
 
 #: scripts/binocular_highlights.ssc:25
 msgid "Orion Extras"
-msgstr ""
+msgstr "Przyległości Oriona"
 
 #: scripts/binocular_highlights.ssc:26
 msgid "Orion's Sword"
@@ -141,35 +142,35 @@ msgstr "Miecz Oriona"
 
 #: scripts/binocular_highlights.ssc:26
 msgid "NGC 1981, M42, M43 and Struve 747"
-msgstr ""
+msgstr "NGC 1981, M42, M43 i Struve 747"
 
 #: scripts/binocular_highlights.ssc:27
 msgid "The Overlooked Open Cluster: M41"
-msgstr ""
+msgstr "Pominięta mgławica otwarta M41"
 
 #: scripts/binocular_highlights.ssc:28
 msgid "M50 in a Stream of Starlight"
-msgstr ""
+msgstr "M50 w strumieniu światła gwiazd"
 
 #: scripts/binocular_highlights.ssc:29
 msgid "M46 and M47: A Celestial Odd Couple"
-msgstr ""
+msgstr "M46 i M47: astronomiczna dziwaczna para"
 
 #: scripts/binocular_highlights.ssc:30
 msgid "Collinders in Canis Minor"
-msgstr ""
+msgstr "Gromady otwarte wg Collindera w Małym Psie"
 
 #: scripts/binocular_highlights.ssc:30
 msgid "Cr 132 and Cr 140"
-msgstr ""
+msgstr "Cr 132 i Cr 140"
 
 #: scripts/binocular_highlights.ssc:31
 msgid "Two Southern Delights"
-msgstr ""
+msgstr "Dwa południowe zachwyty"
 
 #: scripts/binocular_highlights.ssc:31
 msgid "NGC 2477 and NGC 2451"
-msgstr ""
+msgstr "NGC 2477 i NGC 2451"
 
 #: scripts/binocular_highlights.ssc:32
 msgid "Chapter 2"
@@ -185,27 +186,27 @@ msgstr "Pierścionek zaręczynowy"
 
 #: scripts/binocular_highlights.ssc:34
 msgid "The Power of Power"
-msgstr ""
+msgstr "Potęga mocy"
 
 #: scripts/binocular_highlights.ssc:34
 msgid "M81 and M82"
-msgstr ""
+msgstr "M81 i M82"
 
 #: scripts/binocular_highlights.ssc:35
 msgid "M101 in the Mind's Eye"
-msgstr ""
+msgstr "M101 w oku umysłu"
 
 #: scripts/binocular_highlights.ssc:36
 msgid "A Star-Hop to M51"
-msgstr ""
+msgstr "Star hopping do M51"
 
 #: scripts/binocular_highlights.ssc:37
 msgid "Galaxy Season"
-msgstr ""
+msgstr "Sezon galaktyczny"
 
 #: scripts/binocular_highlights.ssc:38
 msgid "Steady on Galaxy M94"
-msgstr ""
+msgstr "Konkretnie na galaktykę M94"
 
 #: scripts/binocular_highlights.ssc:39
 msgid "Globular Cluster M3"
@@ -213,15 +214,15 @@ msgstr "Gromada kulista M3"
 
 #: scripts/binocular_highlights.ssc:40
 msgid "In and Around Melotte 111"
-msgstr ""
+msgstr "Melotte 111 i okolice"
 
 #: scripts/binocular_highlights.ssc:41
 msgid "A Trio of Doubles in Bootes"
-msgstr ""
+msgstr "Trzy układy podwójne w Wolarzu"
 
 #: scripts/binocular_highlights.ssc:42
 msgid "R Cor Bor's Vanishing Act"
-msgstr ""
+msgstr "Zaniki R Coronae Borealis"
 
 #: scripts/binocular_highlights.ssc:43
 msgid "Two Doubles in Cancer"
@@ -229,7 +230,7 @@ msgstr "Dwie podwójne w Raku"
 
 #: scripts/binocular_highlights.ssc:43
 msgid "Rho and Iota Cancri"
-msgstr ""
+msgstr "Rho i Jota Cancri"
 
 #: scripts/binocular_highlights.ssc:44
 msgid "The Beehive Cluster"
@@ -237,23 +238,23 @@ msgstr "Gromada Żłóbek"
 
 #: scripts/binocular_highlights.ssc:45
 msgid "A Visit to NGC 2903"
-msgstr ""
+msgstr "Wizyta w NGC 2903"
 
 #: scripts/binocular_highlights.ssc:46 scripts/binocular_highlights.ssc:47
 msgid "A Pair of Leo Doubles"
-msgstr ""
+msgstr "Para układów podwójnych w gwiazdozbiorze Lwa"
 
 #: scripts/binocular_highlights.ssc:46
 msgid "Tau Leonis"
-msgstr ""
+msgstr "Tau w gwiazdozbiorze Lwa"
 
 #: scripts/binocular_highlights.ssc:47
 msgid "Alpha Leonis (Regulus)"
-msgstr ""
+msgstr "Alfa w gwiazdozbiorze Lwa (Regulus)"
 
 #: scripts/binocular_highlights.ssc:48
 msgid "Star Cluster M48 in Hydra"
-msgstr ""
+msgstr "Gromada gwiazd M48 w gwiazdozbiorze Hydry"
 
 #: scripts/binocular_highlights.ssc:49
 msgid "U Hydra"
@@ -270,19 +271,19 @@ msgstr "V Hydrae"
 #: scripts/binocular_highlights.ssc:50
 msgid ""
 "It has been ranging from magnitude 6 to 10 with a period of about 550 days."
-msgstr ""
+msgstr "Zmiany od 6 do 10 wielkości gwiazdowej z okresem około 550 dni."
 
 #: scripts/binocular_highlights.ssc:51
 msgid "M104 and the Great Beyond"
-msgstr ""
+msgstr "M104 i zaświaty"
 
 #: scripts/binocular_highlights.ssc:52
 msgid "Ancient Globular M5"
-msgstr ""
+msgstr "Starożytna i kulista M5"
 
 #: scripts/binocular_highlights.ssc:53
 msgid "Magnificent Omega Centauri"
-msgstr ""
+msgstr "Wspaniała Omega Centauri"
 
 #: scripts/binocular_highlights.ssc:54
 msgid "Chapter 3"
@@ -290,7 +291,7 @@ msgstr "Rozdział 3"
 
 #: scripts/binocular_highlights.ssc:54
 msgid "June to August"
-msgstr ""
+msgstr "Od czerwca do sierpnia"
 
 #: scripts/binocular_highlights.ssc:55
 msgid "Resolving Nu Draconis"
@@ -306,7 +307,7 @@ msgstr "Wielka Gromada Herkulesa"
 
 #: scripts/binocular_highlights.ssc:57
 msgid "Double Delight Albireo"
-msgstr ""
+msgstr "Podwójnie rozkoszne Albireo"
 
 #: scripts/binocular_highlights.ssc:57
 msgid "Albireo's components are separated by 35\""
@@ -1290,4 +1291,389 @@ msgstr ""
 
 #: scripts/uranian_analemma.ssc:16
 msgid "Uranian analemma"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:17
+msgid "Messier Marathon"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:84
+msgid "Difficulty is 0"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:85
+msgid "Very diffuse, very dark, very difficult"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:86
+msgid "Easier than M74, small"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:87
+msgid "Visible to the naked eye, no difficulty"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:88
+msgid "More difficult than M110 to verify, small"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:89
+msgid "In the west of M31, it is easy to detect"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:90
+msgid "Diffuse, great, brighter"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:91
+msgid "Small, easy to locate, not as horror as imagined"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:92
+msgid "Difficult to locate, easy to detect and verify"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:93
+msgid "Small, easy to locate, don't confuse with NGC663"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:94
+msgid "Large, scattered, easy"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:95
+msgid "Fuzzy, easy to find, accompanied by a small star"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:96
+msgid "Visible to the naked eye, better than M31"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:97
+msgid "Very close to M42, not easy to see the fuzzy"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:98
+msgid "Small, dark, few stars around"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:99
+msgid "Easy to locate, easy to detect in a good transparency."
+msgstr ""
+
+#: scripts/messier_marathon.ssc:100
+msgid "Visible to the naked eye, easier"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:101 scripts/messier_marathon.ssc:153
+#: scripts/messier_marathon.ssc:174
+msgid "Easy to locate and verify"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:102 scripts/messier_marathon.ssc:103
+msgid "Large, scattered"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:104
+msgid "Bright, easy to verify, difficult to locate"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:105
+msgid "Large, difficult to locate, easy to confuse with NGC2506"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:106
+msgid "Easy, more scattered"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:107
+msgid "Easy, fuzzy"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:108
+msgid "Easy, scattered"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:109
+msgid "Easy, large, scattered"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:110
+msgid "Very close to M96 and M105"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:111
+msgid "Easy to locate and verify, assist to verify M95 and M105"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:112
+msgid "Dark"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:113
+msgid "Very close, it’s like M81 and M82"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:114
+msgid "There is NGC3628 nearby, don't think you have found a new comet"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:115
+msgid "Like the darkened M33, require a high sky conditions"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:116
+msgid "Difficult to locate, 4 stars of the inverted 7 shape beside"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:117
+msgid "Easy, you can see the companion galaxy"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:118
+msgid "Easy to verify"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:119
+msgid "Not easy to locate, small, slightly dark"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:120
+msgid "Not easy to locate, bright"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:121
+msgid "Not easy to locate, no bright stars nearby"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:122
+msgid "Easy to locate"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:123
+msgid "Beside M60, it is easy to verify"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:124
+msgid "It’s an easier one"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:125
+msgid "As bright as M85, easy to verify"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:126
+msgid "Dark, hard to look"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:127
+msgid "Easy to detect than M89, easy to locate"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:128
+msgid "Easy to locate, detect once"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:129
+msgid "There is an NGC4438 near M84 and M86, don't make a mistake"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:130
+msgid "M84 are together, closer to NGC4438"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:131
+msgid "Just above M90, almost like M90"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:132
+msgid "Look hard"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:133
+msgid "This bunch of things in the Virgo Cluster is not easy"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:134
+msgid "M99 is easier to verify than M98"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:135
+msgid "First find M100 and then find M98 and M99"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:136
+msgid "Far away, but very bright, easy to find"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:137
+msgid "Small, not easy to locate, a little difficult"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:138
+msgid "Not easy to locate, easy to verify"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:139
+msgid "Easy to locate and verify, small"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:140
+msgid "Easy to verify, a star 5 magnitude nearby"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:141
+msgid "Visible to the naked eye, big, bright"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:142
+msgid "Bright and big in the galaxies, not hard to find"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:143
+msgid "Bright, easy to verify"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:144
+msgid "Easy to verify in a right location"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:145
+msgid "Famous, like the shoulder pole star"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:146
+msgid "It may be easier to locate from the Dragon"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:147
+msgid "Small, 20 times or more is still easy to detect"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:148
+msgid "More difficult than M57, not easy to locate, very small"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:149
+msgid "Easy, small, looks like a cluster of stars 7-8 magnitude"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:150
+msgid "Larger than imagined, very scattered, not easy to locate"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:151
+msgid "Find M71 first, then find M27, and will be easier to locate"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:152
+msgid "Easy to locate, easy to verify in 50 binos"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:154
+msgid "Bright, like M13, easy to find"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:155
+msgid "Detect it with M12, brighter than M12"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:156
+msgid "Difficult to locate, easy to verify"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:157
+msgid "Small, not easy to verify"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:158
+msgid "Bright, big, don't forget to detect NGC6144 nearby"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:159
+msgid "Not easy to verify at low power, easy at high power"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:160
+msgid "Follow the line of M4 and Antares, easy to verify"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:161
+msgid "Looking down from M19, darker than M19, but easy to verify"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:162
+msgid "Easy to locate, bright, and almost like M13"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:163
+msgid "Easy to locate M26 by M11"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:164
+msgid "Easy"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:165 scripts/messier_marathon.ssc:178
+msgid "Difficult to locate, bright, easy to verify"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:166
+msgid "Beside M81, vertical to each other"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:167
+msgid "Large, a little fuzzy"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:167
+msgid "Beside M20"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:168
+msgid "It’s not hard to see the diffuse nebula"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:169
+msgid "Visible to the naked eye, extremely easy"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:170
+msgid "Big, easy"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:170
+msgid "Easy to locate and verify, bright"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:171
+msgid "M13 second"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:172
+msgid "Too big, scattered, not easy to verify"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:173
+msgid "Bigger than M6"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:175
+msgid "Brighter than imagined, can be detected with 60 binos"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:176
+msgid "Darker than M97, long strips, look hard"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:177
+msgid "Easy to verify with more than 20 times binos"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:179
+msgid "In the morning light, it looks too hard, dark"
+msgstr ""
+
+#: scripts/messier_marathon.ssc:288
+msgid "cannot be seen now"
 msgstr ""

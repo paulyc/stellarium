@@ -36,19 +36,20 @@ void TestConversions::testHMSToRad()
 	QVariantList data;
 
 	data << 0 << 0 << 0 << 0.;
-	data << 1 << 0 << 0 << M_PI/12;
-	data << 6 << 0 << 0 << M_PI/2;
+	data << 1 << 0 << 0 << M_PI/12.;
+	data << 1 << 12 << 0 << M_PI/10.;
+	data << 6 << 0 << 0 << M_PI_2;
 	data << 12 << 0 << 0 << M_PI;
-	data << 15 << 0 << 0 << 5*M_PI/4;
-	data << 0 << 15 << 0 << M_PI/720;
-	data << 0 << 0 << 15 << M_PI/43200;
-	data << 2 << 15 << 45 << 269*M_PI/1600;
-	data << 20 << 0 << 0 << 5*M_PI/3;
-	data << 24 << 0 << 0 << 2*M_PI;
-	data << 0 << 59 << 0 << 59*M_PI/10800;
-	data << 0 << 0 << 59 << 59*M_PI/648000;
-	data << 0 << 59 << 59 << 3599*M_PI/648000;
-	data << 3 << 59 << 59 << 165599*M_PI/648000;
+	data << 15 << 0 << 0 << 5.*M_PI_4;
+	data << 0 << 15 << 0 << M_PI/48.;
+	data << 0 << 0 << 15 << M_PI/2880.;
+	data << 2 << 15 << 45 << 181.*M_PI/960.;
+	data << 20 << 0 << 0 << 5.*M_PI/3.;
+	data << 24 << 0 << 0 << 2.*M_PI;
+	data << 0 << 59 << 0 << 59.*M_PI/720.;
+	data << 0 << 0 << 59 << 59.*M_PI/43200.;
+	data << 0 << 59 << 59 << 3599.*M_PI/43200.;
+	data << 3 << 59 << 59 << 14399.*M_PI/43200.;
 
 	while (data.count() >= 4)
 	{
@@ -68,12 +69,12 @@ void TestConversions::testDMSToRad()
 
 	data << 0 << 0 << 0 << 0.;
 	data << 30 << 0 << 0 << M_PI/6;
-	data << 45 << 0 << 0 << M_PI/4;
+	data << 45 << 0 << 0 << M_PI_4;
 	data << 60 << 0 << 0 << M_PI/3;
-	data << 90 << 0 << 0 << M_PI/2;
+	data << 90 << 0 << 0 << M_PI_2;
 	data << 120 << 0 << 0 << 2*M_PI/3;
 	data << 180 << 0 << 0 << M_PI;
-	data << 270 << 0 << 0 << 3*M_PI/2;
+	data << 270 << 0 << 0 << 3*M_PI_2;
 	data << 360 << 0 << 0 << 2*M_PI;
 	data << 0 << 30 << 0 << M_PI/360;
 	data << 0 << 45 << 0 << M_PI/240;
@@ -100,12 +101,12 @@ void TestConversions::testDMSStrToRad()
 
 	data << "+0d0'0\""	<< 0.;
 	data << "+30d0'0\""	<< M_PI/6;
-	data << "+45d0'0\""	<< M_PI/4;
+	data << "+45d0'0\""	<< M_PI_4;
 	data << "+60d0'0\""	<< M_PI/3;
-	data << "+90d0'0\""	<< M_PI/2;
+	data << "+90d0'0\""	<< M_PI_2;
 	data << "+120d0'0\""	<< 2*M_PI/3;
 	data << "+180d0'0\""	<< M_PI;
-	data << "+270d0'0\""	<< 3*M_PI/2;
+	data << "+270d0'0\""	<< 3*M_PI_2;
 	data << "+360d0'0\""	<< 2*M_PI;
 	data << "+0d30'0\""	<< M_PI/360;
 	data << "+0d45'0\""	<< M_PI/240;
@@ -115,7 +116,7 @@ void TestConversions::testDMSStrToRad()
 	data << "+10d59'59\""	<< 39599*M_PI/648000;
 	data << "-120d0'0\""	<< -2*M_PI/3;
 	data << "-180d0'0\""	<< -M_PI;
-	data << "-270d0'0\""	<< -3*M_PI/2;
+	data << "-270d0'0\""	<< -3*M_PI_2;
 	data << "-0d30'0\""	<< -M_PI/360;
 	data << "-0d45'0\""	<< -M_PI/240;
 

@@ -872,6 +872,8 @@ In this mode, the circle marks are not linked to the sky, but to the horizontal 
 For example, you can get an analemma of the Sun for any location (Fig.~\ref{fig:gui:AstroCalc:Ephemeris:Analemma} and \ref{fig:gui:AstroCalc:Ephemeris:AnalemmaMars}), 
 or observe the visibility of Mercury, Venus or a comet in the twilight sky.
 
+Since version 0.19.2\newFeature{v0.19.2} you may define the color of markers and enable display markers for all naked-eye visible planets.
+
 \begin{figure}[tbp]
 \centering\includegraphics[width=0.98\textwidth]{astrocalc_dialog_ephemeris_analemma.png}
 \caption{Astronomical Calculations (AstroCalc): Analemma on the Earth}
@@ -891,6 +893,8 @@ or observe the visibility of Mercury, Venus or a comet in the twilight sky.
 This tab allows you to compute phenomena like conjunctions, oppositions, 
 occultations and eclipses (in special cases) between planetary objects 
 (Fig.~\ref{fig:gui:AstroCalc:Phenomena}). 
+In version 0.19.3\newFeature{v0.19.3} we added computation greatest elongations 
+for inner planets and stationary points for all planets in additional to exist phenomena.
 You can export the calculated phenomena into an XLSX or CSV file.
 
 \begin{figure}[htbp]
@@ -899,10 +903,12 @@ You can export the calculated phenomena into an XLSX or CSV file.
 \label{fig:gui:AstroCalc:Phenomena}
 \end{figure}
 
-Two columns in the table \newFeature{v0.18.2/.3} may be helpful for planning observation of phenomena:
+Four columns in the table may be helpful for planning observation of phenomena:
 \begin{description}
-  \item[solar elongation] angular distance from the Sun
-  \item[lunar elongation] angular distance from the Moon
+  \item[solar elongation] angular distance from the Sun\newFeature{v0.18.2/.3}
+  \item[lunar elongation] angular distance from the Moon\newFeature{v0.18.2/.3}
+  \item[mag. 1] magnitude of first object\newFeature{v0.19.3}
+  \item[mag. 2] magnitude of second object\newFeature{v0.19.3}
 \end{description}
 
 
@@ -973,21 +979,23 @@ You can select from
 \item Phase angle vs. Time
 \item Heliocentric distance vs. Time\newFeature{v0.18.2}
 \item Transit altitude vs. Time\newFeature{v0.19.0}
+\item Right ascension vs. Time\newFeature{v0.19.3}
+\item Declination vs. Time\newFeature{v0.19.3}
 \end{itemize}
 
 This tool may be very helpful for educational and statistics purposes.%
 	\footnote{The idea for this tool has been obtained from \program{SkytechX}: \url{http://www.skytechx.eu/}}
 	
-\subsubsection{The ``Angular Distance'' Subtab}
-\label{sec:gui:AstroCalc:Graphs:AD}
+\subsubsection{The ``Lunar Distance'' Subtab}
+\label{sec:gui:AstroCalc:Graphs:LD}
 
 \begin{figure}[htbp]
 \centering\includegraphics[width=0.75\textwidth]{astrocalc_dialog_graphs_tab_ad.png}
-\caption{Astronomical Calculations (AstroCalc): Graphs / Angular Distance}
-\label{fig:gui:AstroCalc:Graphs:AD}
+\caption{Astronomical Calculations (AstroCalc): Graphs / Lunar Distance}
+\label{fig:gui:AstroCalc:Graphs:LD}
 \end{figure}
 
-This subtab \newFeature{v0.18.3} can show ``Angular Distance'' graph --- change of angular distance between the Moon and selected object (for example some deep-sky object) for the nearest 30 days. This tool was introduced for planning monthly observations (Fig.~\ref{fig:gui:AstroCalc:Graphs:AD}).
+This subtab \newFeature{v0.18.3} can show ``Lunar Distance'' (``Angular Distance'' previously) graph --- change of angular distance between the Moon and selected object (for example some deep-sky object) for the nearest 30 days. This tool was introduced for planning monthly observations (Fig.~\ref{fig:gui:AstroCalc:Graphs:LD}).
 
 \subsection{The ``What's Up Tonight'' (WUT) Tab}
 \label{sec:gui:AstroCalc:WUT}

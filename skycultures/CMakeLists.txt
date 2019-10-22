@@ -1,3 +1,4 @@
+ADD_SUBDIRECTORY( anutan )
 ADD_SUBDIRECTORY( arabic )
 ADD_SUBDIRECTORY( arabic_moon_stations )
 # Exclude from standard package
@@ -34,6 +35,7 @@ ADD_SUBDIRECTORY( siberian )
 ADD_SUBDIRECTORY( tongan )
 ADD_SUBDIRECTORY( tukano )
 ADD_SUBDIRECTORY( tupi )
+ADD_SUBDIRECTORY( vanuatu_netwar )
 ADD_SUBDIRECTORY( western )
 ADD_SUBDIRECTORY( western_rey )
 ADD_SUBDIRECTORY( western_hlad )

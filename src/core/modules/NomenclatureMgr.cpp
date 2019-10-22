@@ -33,6 +33,7 @@
 #include <QSettings>
 #include <QFile>
 #include <QDir>
+#include <QBuffer>
 
 NomenclatureMgr::NomenclatureMgr()
 {
@@ -116,16 +117,27 @@ void NomenclatureMgr::loadNomenclature()
 	       << "RE"	<< "RT"	<< "RI"	<< "RU"	<< "SF"	<< "SC"	<< "SE"	<< "SI"	<< "SU"	<< "TA"
 	       << "TE"	<< "TH"	<< "UN"	<< "VA"	<< "VS"	<< "VI";
 
-	QString surfNamesFile = StelFileMgr::findFile("data/nomenclature.fab");
+	QString surfNamesFile = StelFileMgr::findFile("data/nomenclature.dat"); // compressed version of file nomenclature.fab
 	if (!surfNamesFile.isEmpty()) // OK, the file is exist!
 	{
 		// Open file
 		QFile planetSurfNamesFile(surfNamesFile);
-		if (!planetSurfNamesFile.open(QIODevice::ReadOnly | QIODevice::Text))
+		if (!planetSurfNamesFile.open(QIODevice::ReadOnly))
 		{
 			qDebug() << "Cannot open file" << QDir::toNativeSeparators(surfNamesFile);
 			return;
 		}
+		QByteArray data = StelUtils::uncompress(planetSurfNamesFile);
+		planetSurfNamesFile.close();
+		//check if decompressing was successful
+		if(data.isEmpty())
+		{
+			qDebug() << "Could not decompress file" << QDir::toNativeSeparators(surfNamesFile);
+			return;
+		}
+		//create and open a QBuffer for reading
+		QBuffer buf(&data);
+		buf.open(QIODevice::ReadOnly);
 
 		// keep track of how many records we processed.
 		int totalRecords=0;
@@ -140,9 +152,9 @@ void NomenclatureMgr::loadNomenclature()
 		float latitude, longitude, size;
 		QStringList faultPlanets;
 
-		while (!planetSurfNamesFile.atEnd())
+		while (!buf.atEnd())
 		{
-			record = QString::fromUtf8(planetSurfNamesFile.readLine());
+			record = QString::fromUtf8(buf.readLine());
 			lineNumber++;
 
 			// Skip comments
@@ -374,7 +386,7 @@ void NomenclatureMgr::loadNomenclature()
 			}
 		}
 
-		planetSurfNamesFile.close();
+		buf.close();
 		qDebug() << "Loaded" << readOk << "/" << totalRecords << "items of planetary surface nomenclature";
 
 		faultPlanets.removeDuplicates();
@@ -402,16 +414,16 @@ void NomenclatureMgr::draw(StelCore* core)
 		// Early exit if the planet is not visible or too small to render the
 		// labels.
 		const Vec3d equPos = p->getJ2000EquatorialPos(core);
-		const double r = p->getEquatorialRadius() * p->getSphereScale();
+		const double r = p->getEquatorialRadius() * static_cast<double>(p->getSphereScale());
 		double angularSize = atan2(r, equPos.length());
-		double screenSize = angularSize * painter.getProjector()->getPixelPerRadAtCenter();
+		double screenSize = angularSize * static_cast<double>(painter.getProjector()->getPixelPerRadAtCenter());
 		if (screenSize < 50)
 			continue;
 		Vec3d n = equPos; n.normalize();
 		SphericalCap boundingCap(n, cos(angularSize));
 		if (!viewportRegion.intersects(boundingCap))
 			continue;
-		if (p->getVMagnitude(core) >= 20.)
+		if (p->getVMagnitude(core) >= 20.f)
 			continue;
 
 		// Render all the items of this planet.
@@ -444,7 +456,7 @@ void NomenclatureMgr::drawPointer(StelCore* core, StelPainter& painter)
 		painter.setColor(c[0],c[1],c[2]);
 		texPointer->bind();
 		painter.setBlending(true);
-		painter.drawSprite2dMode(screenpos[0], screenpos[1], 13.f, StelApp::getInstance().getTotalRunTime()*40.);
+		painter.drawSprite2dMode(static_cast<float>(screenpos[0]), static_cast<float>(screenpos[1]), 13.f, static_cast<float>(StelApp::getInstance().getTotalRunTime()*40.));
 	}
 }
 

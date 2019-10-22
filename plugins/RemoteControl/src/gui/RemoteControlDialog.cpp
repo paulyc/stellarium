@@ -23,6 +23,7 @@
 #include "ui_remoteControlDialog.h"
 
 #include "StelApp.hpp"
+#include "StelCore.hpp"
 #include "StelLocaleMgr.hpp"
 #include "StelModule.hpp"
 #include "StelModuleMgr.hpp"
@@ -98,6 +99,7 @@ void RemoteControlDialog::createDialogContent()
 	connect(ui->resetButton, SIGNAL(clicked(bool)),this,SLOT(restart()));
 
 	connect(ui->saveSettingsButton, SIGNAL(clicked()), rc, SLOT(saveSettings()));
+	connect(StelApp::getInstance().getCore(), SIGNAL(configurationDataSaved()), this, SLOT(saveSettings()));
 	connect(ui->restoreDefaultsButton, SIGNAL(clicked()), rc, SLOT(restoreDefaultSettings()));
 
 	setAboutHtml();
@@ -130,6 +132,13 @@ void RemoteControlDialog::setAboutHtml(void)
 	html += "<p>" + q_("This plugin was developed during ESA SoCiS 2015.") + "</p>";
 	// TRANSLATORS: The text between braces is the text of an HTML link.
 	html += "<p>" + q_("This plugin uses the {QtWebApp HTTP server} by Stefan Frings.").toHtmlEscaped().replace(a_rx, "<a href=\"http://stefanfrings.de/qtwebapp/index-en.html\">\\1</a>") + "</p>";
+
+	html += "<h3>" + q_("Publications") + "</h3>";
+	html += "<p>"  + q_("If you use this plugin in your publications, please cite:") + "</p>";
+	html += "<p><ul>";
+	html += "<li>" + QString("{Georg Zotti, Florian Schaukowitsch, and Michael Wimmer. The Skyscape Planetarium}. In Liz Henty, Bernadette Brady, Darrelyn Gunzburg, Frank Prendergast, and Fabio Silva, editors, The Marriage of Astronomy and Culture: Theory and Method in the Study of Cultural Astronomy (Papers from the 2016 SEAC Conference), volume 21 of Culture and Cosmos, pages 269–281, Lampeter, Ceredigion, Wales, Spring/Summer and Autumn/Winter 2017. Culture and Cosmos & Sophia Centre Press.")
+			.toHtmlEscaped().replace(a_rx, "<a href=\"http://www.cultureandcosmos.org/pdfs/21/CCv21_17Zotti.pdf\">\\1</a>") + "</li>";
+	html += "</ul></p>";
 
 	html += "<h3>" + q_("Links") + "</h3>";
 	// TRANSLATORS: The text between braces is the text of an HTML link.

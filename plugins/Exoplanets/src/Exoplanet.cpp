@@ -72,8 +72,8 @@ Exoplanet::Exoplanet(const QVariantMap& map)
 		
 	designation  = map.value("designation").toString();
 	starProperName = map.value("starProperName").toString();
-	RA = StelUtils::getDecAngle(map.value("RA").toString());
-	DE = StelUtils::getDecAngle(map.value("DE").toString());
+	RA = static_cast<float>(StelUtils::getDecAngle(map.value("RA").toString()));
+	DE = static_cast<float>(StelUtils::getDecAngle(map.value("DE").toString()));
 	distance = map.value("distance").toFloat();
 	stype = map.value("stype").toString();
 	smass = map.value("smass").toFloat();
@@ -625,7 +625,7 @@ bool Exoplanet::isDiscovered(const StelCore *core)
 
 void Exoplanet::update(double deltaTime)
 {
-	labelsFader.update((int)(deltaTime*1000));
+	labelsFader.update(static_cast<int>(deltaTime*1000));
 }
 
 void Exoplanet::draw(StelCore* core, StelPainter *painter)

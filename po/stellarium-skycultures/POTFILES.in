@@ -3,6 +3,10 @@ skycultures/translations.fab
 # Proper names of deep-sky objects
 nebulae/default/names.dat
 # Sky cultures (include proper names of the stars and native names of the planets)
+skycultures/anutan/constellation_names.eng.fab
+skycultures/anutan/star_names.fab
+skycultures/anutan/planet_names.fab
+skycultures/anutan/dso_names.fab
 skycultures/arabic/constellation_names.eng.fab
 skycultures/arabic/star_names.fab
 skycultures/arabic_moon_stations/constellation_names.eng.fab
@@ -90,6 +94,10 @@ skycultures/tukano/constellation_names.eng.fab
 skycultures/tukano/star_names.fab
 skycultures/tupi/constellation_names.eng.fab
 skycultures/tupi/star_names.fab
+skycultures/vanuatu_netwar/constellation_names.eng.fab
+skycultures/vanuatu_netwar/star_names.fab
+skycultures/vanuatu_netwar/planet_names.fab
+skycultures/vanuatu_netwar/dso_names.fab
 skycultures/western/constellation_names.eng.fab
 skycultures/western/asterism_names.eng.fab
 skycultures/western/star_names.fab

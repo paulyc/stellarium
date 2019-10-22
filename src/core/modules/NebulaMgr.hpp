@@ -329,7 +329,7 @@ public:
 	virtual void draw(StelCore* core);
 
 	//! Update state which is time dependent.
-	virtual void update(double deltaTime) {hintsFader.update((int)(deltaTime*1000)); flagShow.update((int)(deltaTime*1000));}
+	virtual void update(double deltaTime) {hintsFader.update(static_cast<int>(deltaTime*1000)); flagShow.update(static_cast<int>(deltaTime*1000));}
 
 	//! Determines the order in which the various modules are drawn.
 	virtual double getCallOrder(StelModuleActionName actionName) const;
@@ -746,7 +746,7 @@ public slots:
 
 	//! Set how long it takes for nebula hints to fade in and out when turned on and off.
 	//! @param duration given in seconds
-	void setHintsFadeDuration(float duration) {hintsFader.setDuration((int) (duration * 1000.f));}
+	void setHintsFadeDuration(float duration) {hintsFader.setDuration(static_cast<int>(duration * 1000.f));}
 
 	//! Set flag for displaying Nebulae Hints.
 	void setFlagHints(bool b) { if (hintsFader!=b) { hintsFader=b; emit flagHintsDisplayedChanged(b);}}
@@ -917,7 +917,7 @@ private slots:
 	void setFontSizeFromApp(int size){nebulaFont.setPixelSize(size);}
 
 private:
-	//! Search for a nebula object by name. e.g. M83, NGC 1123, IC 1234.
+	//! Search for a nebula object by name, e.g. M83, NGC 1123, IC 1234.
 	NebulaP search(const QString& name);
 
 	//! Search the Nebulae by position
@@ -959,6 +959,8 @@ private:
 	NebulaP searchHCG(QString HCG) const;
 	NebulaP searchAbell(unsigned int Abell) const;
 	NebulaP searchESO(QString ESO) const;
+	NebulaP searchVdBH(QString VdBH) const;
+	NebulaP searchDWB(unsigned int DWB) const;
 
 	// Load catalog of DSO
 	bool loadDSOCatalog(const QString& filename);

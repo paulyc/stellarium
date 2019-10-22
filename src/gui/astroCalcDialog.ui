@@ -51,7 +51,7 @@
        <number>0</number>
       </property>
       <property name="rightMargin">
-       <number>0</number>
+       <number>6</number>
       </property>
       <property name="bottomMargin">
        <number>0</number>
@@ -428,6 +428,16 @@
              </widget>
             </item>
             <item>
+             <widget class="QCheckBox" name="ephemerisShowLineCheckBox">
+              <property name="toolTip">
+               <string>Show connecting line between the ephemeris markers</string>
+              </property>
+              <property name="text">
+               <string comment="show line" extracomment="full phrase is 'show line'">line</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QCheckBox" name="ephemerisShowMarkersCheckBox">
               <property name="toolTip">
                <string>Show markers of positions of the current celestial body on the sky</string>
@@ -454,6 +464,20 @@
               </property>
               <property name="text">
                <string>magnitudes</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonExtraEphemerisDialog">
+              <property name="toolTip">
+               <string>Extra options for ephemeris visualization</string>
+              </property>
+              <property name="text">
+               <string notr="true"/>
+              </property>
+              <property name="icon">
+               <iconset resource="../../data/gui/guiRes.qrc">
+                <normaloff>:/graphicGui/8-off-settings.png</normaloff>:/graphicGui/8-off-settings.png</iconset>
               </property>
              </widget>
             </item>
@@ -1886,6 +1910,8 @@
    <header>external/qcustomplot/qcustomplot.h</header>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="../../data/gui/guiRes.qrc"/>
+ </resources>
  <connections/>
 </ui>

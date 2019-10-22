@@ -21,7 +21,7 @@
 #define TESTCOMPUTATIONS_HPP
 
 #include <QObject>
-#include <QTest>
+#include <QtTest>
 
 class TestComputations : public QObject
 {
@@ -29,7 +29,7 @@ class TestComputations : public QObject
 
 private slots:
 	void testSiderealPeriodComputations();
-	void testJDFormBesselianEpoch();
+	void testJDFromBesselianEpoch();
 	void testIsPowerOfTwo();
 	void testDayInYear();
 	void testYearFraction();
