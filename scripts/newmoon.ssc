@@ -1,0 +1,61 @@
+
+
+function sign(x) {
+    return x >= 0.0 ? 1 : -1;
+}
+
+function abs(x) {
+    return x < 0.0 ? -x : x;
+}
+
+var moonRALabel = LabelMgr.labelScreen("Moon RA: ???", 20, 130, false, 20, '#ff0000');
+var sunRALabel = LabelMgr.labelScreen("Sun RA: ???", 20, 160, false, 20, '#ff0000');
+var diffLabel = LabelMgr.labelScreen("Diff RA: ???", 20, 190, false, 20, '#ff0000');
+
+LabelMgr.setLabelShow(moonRALabel, true);
+LabelMgr.setLabelShow(sunRALabel, true);
+LabelMgr.setLabelShow(diffLabel, true);
+
+function toNextNewMoon() {
+    var moonpos = core.getObjectInfo("Moon").ra;
+    var sunpos = core.getObjectInfo("Sun").ra;
+    var moonposoffset = moonpos < 0 ? 360 : 0;
+    var sunposoffset = sunpos < 0 ? 360 : 0;
+    moonpos += moonposoffset;
+    sunpos += sunposoffset;
+    if (moonpos > sunpos) {
+        moonposoffset -= 360;
+        moonpos -= 360;
+    }
+    var RAdiff = moonpos - sunpos;
+    var slow = false;
+    core.setTimeRate(100000);
+
+    for (;;) {
+        moonpos = core.getObjectInfo("Moon").ra + moonposoffset;
+        if (moonpos < 0) {
+            moonpos += 360.0;
+            moonposoffset += 360.0;
+        }
+        sunpos = core.getObjectInfo("Sun").ra + sunposoffset;
+        if (sunpos < 0) {
+            sunpos += 360.0;
+            sunposoffset += 360.0;
+        }
+        RAdiff = moonpos - sunpos;
+        LabelMgr.setLabelText(moonRALabel, "Moon RA: " + moonpos);
+        LabelMgr.setLabelText(sunRALabel, "Sun RA: " + sunpos);
+        LabelMgr.setLabelText(diffLabel, "Diff RA: " + RAdiff);
+        if (RAdiff > -5 && !slow) {
+            core.setTimeRate(600);
+            slow = true;
+        }
+        if (RAdiff > 0) {
+            break;
+        }
+        core.wait(0.1);
+    }
+    core.setTimeRate(0);
+}
+
+toNextNewMoon();
