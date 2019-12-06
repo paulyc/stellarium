@@ -357,21 +357,21 @@ void StelPainter::drawViewportShape(void)
 		glEnable(GL_BLEND);
 }
 
-void StelPainter::computeFanDisk(float radius, int innerFanSlices, int level, QVector<double>& vertexArr, QVector<float>& texCoordArr)
+void StelPainter::computeFanDisk(float radius, uint innerFanSlices, uint level, QVector<double>& vertexArr, QVector<float>& texCoordArr)
 {
 	Q_ASSERT(level<32);
 	float rad[64];
-	int i,j;
+	uint i,j;
 	rad[level] = radius;
-	for (i=level-1;i>=0;--i)
+	for (i=level-1u;i!=-1u;--i)
 	{
 		rad[i] = rad[i+1]*(1.f-M_PIf/(innerFanSlices<<(i+1)))*2.f/3.f;
 	}
-	int slices = innerFanSlices<<level;
+	uint slices = innerFanSlices<<level;
 	
 	float* cos_sin_theta = StelUtils::ComputeCosSinTheta(static_cast<uint>(slices));
 	float* cos_sin_theta_p;
-	int slices_step = 2;
+	uint slices_step = 2;
 	float x,y,xa,ya;
 	radius*=2.f;
 	vertexArr.resize(0);
@@ -542,25 +542,26 @@ void StelPainter::sSphereMap(double radius, unsigned int slices, unsigned int st
 
 void StelPainter::drawTextGravity180(float x, float y, const QString& ws, float xshift, float yshift)
 {
-	float dx, dy, d, theta, theta_o, psi;
+	float dx, dy, d, theta, theta_o, psi, width;
 	dx = x - static_cast<float>(prj->viewportCenter[0]);
 	dy = y - static_cast<float>(prj->viewportCenter[1]);
 	d = std::sqrt(dx*dx + dy*dy);
 	float limit = 120.;
 
 	// If the text is too far away to be visible in the screen return
-	if (d>qMax(prj->viewportXywh[3], prj->viewportXywh[2])*2)
+	if (d>qMax(prj->viewportXywh[3], prj->viewportXywh[2])*2 || ws.isEmpty())
 		return;
+
+	float cWidth = static_cast<float>(getFontMetrics().boundingRect(ws).width())/ws.length();
+	float stdWidth = static_cast<float>(getFontMetrics().boundingRect("a").width());
 	theta = std::atan2(dy - 1, dx);
-	theta_o = M_PIf + std::atan2(dx, dy - 1);
-	psi = std::atan2(static_cast<float>(getFontMetrics().boundingRect(ws).width()/ws.length()),d + 1) * M_180_PIf;
+	theta_o = M_PIf + std::atan2(dx, dy - 1);	
+	psi = std::atan2(cWidth, d + 1) * M_180_PIf;
 	if (psi>5)
 		psi = 5;
 
-	float cWidth = static_cast<float>(getFontMetrics().boundingRect(ws).width())/ws.length();
 	float xVc = static_cast<float>(prj->viewportCenter[0]) + xshift;
 	float yVc = static_cast<float>(prj->viewportCenter[1]) + yshift;
-
 	const float cosr = std::cos(-theta_o * M_PI_180f);
 	const float sinr = std::sin(-theta_o * M_PI_180f);
 	float xom = x + xshift*cosr - yshift*sinr;
@@ -582,7 +583,11 @@ void StelPainter::drawTextGravity180(float x, float y, const QString& ws, float 
 				y = d * std::sin(theta) + yVc ;
 				drawText(x, y, ws[i], 90.f + theta*M_180_PIf, 0., 0.);
 				// Compute how much the character contributes to the angle
-				theta += psi * M_PI_180f * (1 + (static_cast<float>(getFontMetrics().boundingRect(ws[i]).width()) - cWidth)/ cWidth);
+				if (ws[i].isSpace())
+					width = stdWidth;
+				else
+					width = static_cast<float>(getFontMetrics().boundingRect(ws[i]).width());
+				theta += psi * M_PI_180f * (1 + (width - cWidth)/ cWidth);
 			}
 		}
 	}
@@ -602,7 +607,11 @@ void StelPainter::drawTextGravity180(float x, float y, const QString& ws, float 
 				x = d * std::cos(theta) + xVc;
 				y = d * std::sin(theta) + yVc;
 				drawText(x, y, ws[slen-1-i], 90.f + theta*M_180_PIf, 0., 0.);
-				theta += psi * M_PI_180f * (1 + (static_cast<float>(getFontMetrics().boundingRect(ws[slen-1-i]).width()) - cWidth)/ cWidth);
+				if (ws[slen-1-i].isSpace())
+					width = stdWidth;
+				else
+					width = static_cast<float>(getFontMetrics().boundingRect(ws[slen-1-i]).width());
+				theta += psi * M_PI_180f * (1 + (width - cWidth)/ cWidth);
 			}
 		}
 	}
@@ -815,7 +824,7 @@ inline void fIter(const StelProjectorP& prj, const Vec3d& p1, const Vec3d& p2, V
 }
 
 // Used by the method below
-QVector<Vec2f> StelPainter::smallCircleVertexArray;
+QVector<Vec3f> StelPainter::smallCircleVertexArray;
 QVector<Vec4f> StelPainter::smallCircleColorArray;
 
 void StelPainter::drawSmallCircleVertexArray()
@@ -826,7 +835,7 @@ void StelPainter::drawSmallCircleVertexArray()
 	Q_ASSERT(smallCircleVertexArray.size()>1);
 
 	enableClientStates(true, false, !smallCircleColorArray.isEmpty());
-	setVertexPointer(2, GL_FLOAT, smallCircleVertexArray.constData());
+	setVertexPointer(3, GL_FLOAT, smallCircleVertexArray.constData());
 	if (!smallCircleColorArray.isEmpty())
 		setColorPointer(4, GL_FLOAT, smallCircleColorArray.constData());
 	drawFromArray(LineStrip, smallCircleVertexArray.size(), 0, false);
@@ -890,10 +899,10 @@ void StelPainter::drawSmallCircleArc(const Vec3d& start, const Vec3d& stop, cons
 		const bool p2InViewport = prj->checkInViewport(p2);
 		if ((p1[2]>0 && p1InViewport) || (p2[2]>0 && p2InViewport))
 		{
-			smallCircleVertexArray.append(Vec2f(static_cast<float>(p1[0]), static_cast<float>(p1[1])));
+			smallCircleVertexArray.append(Vec3f(static_cast<float>(p1[0]), static_cast<float>(p1[1]), static_cast<float>(p1[2])));
 			if (i+1==tessArc.constEnd())
 			{
-				smallCircleVertexArray.append(Vec2f(static_cast<float>(p2[0]), static_cast<float>(p2[1])));
+				smallCircleVertexArray.append(Vec3f(static_cast<float>(p2[0]), static_cast<float>(p2[1]), static_cast<float>(p2[2])));
 				drawSmallCircleVertexArray();
 			}
 			if (viewportEdgeIntersectCallback && p1InViewport!=p2InViewport)
@@ -909,7 +918,7 @@ void StelPainter::drawSmallCircleArc(const Vec3d& start, const Vec3d& stop, cons
 		{
 			// Break the line, draw the stored vertex and flush the list
 			if (!smallCircleVertexArray.isEmpty())
-				smallCircleVertexArray.append(Vec2f(static_cast<float>(p1[0]), static_cast<float>(p1[1])));
+				smallCircleVertexArray.append(Vec3f(static_cast<float>(p1[0]), static_cast<float>(p1[1]), static_cast<float>(p1[2])));
 			drawSmallCircleVertexArray();
 		}
 	}
@@ -931,12 +940,12 @@ void StelPainter::drawPath(const QVector<Vec3d> &points, const QVector<Vec4f> &c
 		if (!prj->intersectViewportDiscontinuity(p1, p2))
 		{
 			prj->project(p1, win);
-			smallCircleVertexArray.append(Vec2f(static_cast<float>(win[0]), static_cast<float>(win[1])));
+			smallCircleVertexArray.append(Vec3f(static_cast<float>(win[0]), static_cast<float>(win[1]), static_cast<float>(win[2])));
 			smallCircleColorArray.append(colors[i]);
 			if (i+2==points.size())
 			{
 				prj->project(p2, win);
-				smallCircleVertexArray.append(Vec2f(static_cast<float>(win[0]), static_cast<float>(win[1])));
+				smallCircleVertexArray.append(Vec3f(static_cast<float>(win[0]), static_cast<float>(win[1]), static_cast<float>(win[2])));
 				smallCircleColorArray.append(colors[i + 1]);
 				drawSmallCircleVertexArray();
 			}
@@ -947,7 +956,7 @@ void StelPainter::drawPath(const QVector<Vec3d> &points, const QVector<Vec4f> &c
 			if (!smallCircleVertexArray.isEmpty())
 			{
 				prj->project(p1, win);
-				smallCircleVertexArray.append(Vec2f(static_cast<float>(win[0]), static_cast<float>(win[1])));
+				smallCircleVertexArray.append(Vec3f(static_cast<float>(win[0]), static_cast<float>(win[1]), static_cast<float>(win[2])));
 				smallCircleColorArray.append(colors[i]);
 			}
 			drawSmallCircleVertexArray();
@@ -1479,9 +1488,11 @@ class VertexArrayProjector
 public:
 	VertexArrayProjector(const StelVertexArray& ar, StelPainter* apainter, const SphericalCap* aclippingCap,
 						 QVarLengthArray<Vec3f, 4096>* aoutVertices, QVarLengthArray<Vec2f, 4096>* aoutTexturePos=Q_NULLPTR, QVarLengthArray<Vec3f, 4096>* aoutColors=Q_NULLPTR, double amaxSqDistortion=5.)
-		   : vertexArray(ar), painter(apainter), clippingCap(aclippingCap), outVertices(aoutVertices),
+		   : //vertexArray(ar),
+		     painter(apainter), clippingCap(aclippingCap), outVertices(aoutVertices),
 			 outColors(aoutColors), outTexturePos(aoutTexturePos), maxSqDistortion(amaxSqDistortion)
 	{
+		Q_UNUSED(ar)
 	}
 
 	// Project a single triangle and add it into the output arrays
@@ -1527,7 +1538,7 @@ public:
 	}
 
 private:
-	const StelVertexArray& vertexArray;
+	//const StelVertexArray& vertexArray; // UNUSED?
 	StelPainter* painter;
 	const SphericalCap* clippingCap;
 	QVarLengthArray<Vec3f, 4096>* outVertices;

@@ -604,10 +604,13 @@ void TestConversions::testStringCoordinateToRad()
 	data << "123.567 S"	<< -2.1567;
 	data << "123.567 W"	<< -2.1567;
 	data << "+46d6'31\""	<< 0.8047;
-	data << "12h0m0s"	<< M_PI;
-	data << "6h0m0s"	<< M_PI/2.;
+	data << "12h0m0s"	        << M_PI;
+	data << "6h0m0s"	        << M_PI/2.;
 	data << "10h30m0s"	<< 2.749;
 	data << "+80°25'10\""	<< 1.404;
+	data << "-45d0m0s"	<< -M_PI/4.;
+	data << "-80°25'10\""	<< -1.404;
+	data << "-80r25m10s"	<< -0.0;
 
 	while (data.count()>=2)
 	{
@@ -844,6 +847,7 @@ void TestConversions::testStrToVec2f()
 	data << "1,0" << 1.f << 0.f;
 	data << "0,1" << 0.f << 1.f;
 	data << "0,0" << 0.f << 0.f;
+	data << "0"    << 0.f << 0.f;
 
 	while (data.count()>=3)
 	{
@@ -892,6 +896,8 @@ void TestConversions::testStrToVec3f()
 	data << "1,0,1" << 1.f << 0.f << 1.f;
 	data << "0,1,0" << 0.f << 1.f << 0.f;
 	data << "0,0,0" << 0.f << 0.f << 0.f;
+	data << "0,0"    << 0.f << 0.f << 0.f;
+	data << "0"       << 0.f << 0.f << 0.f;
 
 	while (data.count()>=4)
 	{
@@ -942,6 +948,9 @@ void TestConversions::testStrToVec4d()
 	data << "1,0,1,0" << 1. << 0. << 1. << 0.;
 	data << "0,1,0,1" << 0. << 1. << 0. << 1.;
 	data << "0,0,0,0" << 0. << 0. << 0. << 0.;
+	data << "0,0,0"    << 0. << 0. << 0. << 0.;
+	data << "0,0"       << 0. << 0. << 0. << 0.;
+	data << "0"          << 0. << 0. << 0. << 0.;
 
 	while (data.count()>=5)
 	{
@@ -983,5 +992,61 @@ void TestConversions::testVec4dToStr()
 							   .arg(srcVec.toString())
 							   .arg(dstVec)
 							   .arg(vec)));
+	}
+}
+
+void TestConversions::testQDateTimeToJD()
+{
+	 QMap<double, QString> map;
+	 map[2454466.0] = "2007-12-31 12:00:00";
+	 map[2500000.0] = "2132-08-31 12:00:00";
+	 map[2454534.0] = "2008-03-08 12:00:00";
+	 map[2299161.0] = "1582-10-15 12:00:00";
+	 map[2454466.5] = "2008-01-01 00:00:00";
+	 map[2400000.0] = "1858-11-16 12:00:00";
+	 //map[2110516.0] = "1066-04-12 12:00:00";
+	 //map[1918395.0] = "0540-04-12 12:00:00";
+	 //map[1794575.0] = "0201-04-12 12:00:00";
+	 //map[1757319.0] = "0099-04-12 12:00:00";
+	 //map[1721424.0] = "0001-01-01 12:00:00";
+	 //map[1721789.0] = "0002-01-01 12:00:00";
+
+	 // See https://doc.qt.io/qt-5/qdate.html#details for restrictions and converion issues (qint64 -> double)
+	 QString format = "yyyy-MM-dd HH:mm:ss";
+	 for (QMap<double, QString>::ConstIterator i=map.constBegin();i!=map.constEnd();++i)
+	 {
+		 //QDateTime d = QDateTime::fromString(i.value(), format);
+		 //qWarning() << i.value() << d.toString(format);
+		 double JD = StelUtils::qDateTimeToJd(QDateTime::fromString(i.value(), format));
+		 QVERIFY2(qAbs(i.key() - JD)<=ERROR_LIMIT, qPrintable(QString("JD: %1 Date: %2 Expected JD: %3")
+					 .arg(QString::number(JD, 'f', 5))
+					 .arg(i.value())
+					 .arg(QString::number(i.key(), 'f', 5))
+					 ));
+	 }
+}
+
+void TestConversions::testTrunc()
+{
+	QMap<double, double> mapd;
+	mapd[0.0] = 0.0;
+	mapd[-1.0] = -1.0;
+	mapd[2454466.0] = 2454466.0;
+	mapd[24.4] = 24.0;
+	mapd[34.5] = 34.0;
+	mapd[-4.9] = -4.0;
+
+	for (QMap<double, double>::ConstIterator i=mapd.constBegin();i!=mapd.constEnd();++i)
+	{
+		double res = StelUtils::trunc(i.key());
+		QVERIFY2(qAbs(i.value() - res)<=ERROR_LIMIT, qPrintable(QString("Result: %1 Expected: %2")
+					.arg(QString::number(res, 'f', 2))
+					.arg(QString::number(i.value(), 'f', 2))
+					));
+		float resf = StelUtils::trunc(static_cast<float>(i.key()));
+		QVERIFY2(qAbs(static_cast<float>(i.value()) - resf)<=ERROR_LIMIT, qPrintable(QString("Result: %1 Expected: %2")
+					.arg(QString::number(resf, 'f', 2))
+					.arg(QString::number(static_cast<float>(i.value()), 'f', 2))
+					));
 	}
 }

@@ -43,6 +43,15 @@ SET(MINIMAL_QT_VERSION "5.4.0")
 # TODO: Check real minimal supported version of GPSD API
 SET(MINIMAL_GPS_API_VERSION "6.0")
 
+### Define minimal version for Windows
+# Use installer for checking minimum requirements
+# Stellarium/MSVC require Windows 7 (6.1) for work
+# Details: http://www.jrsoftware.org/ishelp/index.php?topic=winvernotes
+SET(ISS_MIN_WIN_VERSION "6.1")
+# Define required version for MSVC
+# Details: https://docs.microsoft.com/ru-ru/windows/win32/winprog/using-the-windows-headers
+SET(MIN_WIN_VERSION "0x0601")
+
 # Use customized cmake macros
 SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
 
@@ -53,7 +62,7 @@ MESSAGE(STATUS "Platform: ${CMAKE_SYSTEM}")
 SET(ENABLE_TESTING 0 CACHE BOOL "Define whether the unit tests should be activated.")
 
 IF(NOT CMAKE_BUILD_TYPE)
-     SET(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build, options are: None Debug GProf Valgrind Release RelWithDebInfo MinSizeRel." FORCE)
+     SET(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build, options are: None Debug GProf Valgrind ASan UBSan Release RelWithDebInfo MinSizeRel." FORCE)
 ENDIF()
 
 IF(${CMAKE_BUILD_TYPE} MATCHES "Debug")
@@ -107,6 +116,20 @@ ENDIF()
 IF(${CMAKE_BUILD_TYPE} MATCHES "Valgrind")
      SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -g")
      SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g")
+ENDIF()
+
+# Add ASan (AddressSanitizer) build options if necessary
+# Details: https://github.com/google/sanitizers/wiki/AddressSanitizer
+IF(${CMAKE_BUILD_TYPE} MATCHES "ASan")
+     SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -O1 -fno-omit-frame-pointer -g")
+     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -O1 -fno-omit-frame-pointer -g")
+ENDIF()
+
+# Add UBSan (UndefinedBehaviorSanitizer) build options if necessary
+# Details: https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html
+IF(${CMAKE_BUILD_TYPE} MATCHES "UBSan")
+     SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined -g")
+     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined -g")
 ENDIF()
 
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -182,6 +205,8 @@ IF(WIN32)
           # C4351: "new" behaviour, member array default initialization. Required since at least C++98, but funny MSVC throws a warning.
           # C4996: deprecated POSIX names (used in zlib)
           SET(STEL_MSVC_FLAGS "/wd4244 /wd4305 /wd4351 /wd4996")
+          # Set minimal version of Windows
+          SET(STEL_MSVC_FLAGS "${STEL_MSVC_FLAGS} /D_WIN32_WINNT=${MIN_WIN_VERSION}")
           IF(MSVC_VERSION GREATER 1700)
                SET(STEL_MSVC_FLAGS "${STEL_MSVC_FLAGS} /MP")
 
@@ -413,26 +438,51 @@ IF(WIN32)
      FIND_PACKAGE(Qt5Svg REQUIRED)
      FIND_PACKAGE(Qt5XmlPatterns REQUIRED)
 
-     # Try found OpenSSL 1.1.x DLL's on Windows
-     IF("${CMAKE_SIZEOF_VOID_P}" EQUAL "4")
-          FIND_FILE(OPENSSL_SSL_LIBRARY_DLL libssl-1_1.dll)
-          FIND_FILE(OPENSSL_CRYPTO_LIBRARY_DLL libcrypto-1_1.dll)
-     ELSEIF("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
-          FIND_FILE(OPENSSL_SSL_LIBRARY_DLL libssl-1_1-x64.dll)
-          FIND_FILE(OPENSSL_CRYPTO_LIBRARY_DLL libcrypto-1_1-x64.dll)
-     ENDIF()
-     SET(ISS_OPENSSL_LIBS "; OpenSSL support")
-     IF(EXISTS ${OPENSSL_SSL_LIBRARY_DLL})
-          MESSAGE(STATUS "Found OpenSSL SSL library: ${OPENSSL_SSL_LIBRARY_DLL}")
-          SET(ISS_OPENSSL_LIBS "${ISS_OPENSSL_LIBS}\nSource: \"${OPENSSL_SSL_LIBRARY_DLL}\"; DestDir: \"{app}\"; Flags: ignoreversion")
-     ENDIF()
-     IF(EXISTS ${OPENSSL_CRYPTO_LIBRARY_DLL})
-          MESSAGE(STATUS "Found OpenSSL crypto library: ${OPENSSL_CRYPTO_LIBRARY_DLL}")
-          SET(ISS_OPENSSL_LIBS "${ISS_OPENSSL_LIBS}\nSource: \"${OPENSSL_CRYPTO_LIBRARY_DLL}\"; DestDir: \"{app}\"; Flags: ignoreversion")
-     ENDIF()
-     IF((NOT EXISTS ${OPENSSL_SSL_LIBRARY_DLL}) AND (NOT EXISTS ${OPENSSL_CRYPTO_LIBRARY_DLL}))
-          SET(ISS_OPENSSL_LIBS "; OpenSSL libraries not found")
-     ENDIF()
+     # Qt 5.9 (LTS) use OpenSSL 1.0* and Qt 5.12 (LTS) and newest version of Qt use OpenSSL 1.1*
+     # Source: https://lists.qt-project.org/pipermail/releasing/2019-March/002614.html
+     IF(${Qt5Core_VERSION} VERSION_LESS "5.10")
+          # OK, it's Qt 5.9, let's try found OpenSSL 1.0.x DLL's on Windows
+          FIND_FILE(OPENSSL_SSLEAY32_LIBRARY_DLL ssleay32.dll)
+          FIND_FILE(OPENSSL_LIBEAY32_LIBRARY_DLL libeay32.dll)
+          FIND_FILE(OPENSSL_LIBSSL32_LIBRARY_DLL libssl32.dll)
+          SET(ISS_OPENSSL_LIBS "; OpenSSL support")
+          IF(EXISTS ${OPENSSL_SSLEAY32_LIBRARY_DLL})
+               MESSAGE(STATUS "Found ssleay32 library: ${OPENSSL_SSLEAY32_LIBRARY_DLL}")
+               SET(ISS_OPENSSL_LIBS "${ISS_OPENSSL_LIBS}\nSource: \"${OPENSSL_SSLEAY32_LIBRARY_DLL}\"; DestDir: \"{app}\"; Flags: ignoreversion")
+          ENDIF()
+          IF(EXISTS ${OPENSSL_LIBEAY32_LIBRARY_DLL})
+               MESSAGE(STATUS "Found libeay32 library: ${OPENSSL_LIBEAY32_LIBRARY_DLL}")
+               SET(ISS_OPENSSL_LIBS "${ISS_OPENSSL_LIBS}\nSource: \"${OPENSSL_LIBEAY32_LIBRARY_DLL}\"; DestDir: \"{app}\"; Flags: ignoreversion")
+          ENDIF()
+          IF(EXISTS ${OPENSSL_LIBSSL32_LIBRARY_DLL})
+               MESSAGE(STATUS "Found libssl32 library: ${OPENSSL_LIBSSL32_LIBRARY_DLL}")
+               SET(ISS_OPENSSL_LIBS "${ISS_OPENSSL_LIBS}\nSource: \"${OPENSSL_LIBSSL32_LIBRARY_DLL}\"; DestDir: \"{app}\"; Flags: ignoreversion")
+          ENDIF()          
+          IF((NOT EXISTS ${OPENSSL_SSLEAY32_LIBRARY_DLL}) AND (NOT EXISTS ${OPENSSL_LIBEAY32_LIBRARY_DLL}))
+               SET(ISS_OPENSSL_LIBS "; OpenSSL libraries not found")
+          ENDIF()
+     ELSE()     
+          # Try found OpenSSL 1.1.x DLL's on Windows (newest Qt)
+          IF("${CMAKE_SIZEOF_VOID_P}" EQUAL "4")
+               FIND_FILE(OPENSSL_SSL_LIBRARY_DLL libssl-1_1.dll)
+               FIND_FILE(OPENSSL_CRYPTO_LIBRARY_DLL libcrypto-1_1.dll)
+          ELSEIF("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
+               FIND_FILE(OPENSSL_SSL_LIBRARY_DLL libssl-1_1-x64.dll)
+               FIND_FILE(OPENSSL_CRYPTO_LIBRARY_DLL libcrypto-1_1-x64.dll)
+          ENDIF()
+          SET(ISS_OPENSSL_LIBS "; OpenSSL support")
+          IF(EXISTS ${OPENSSL_SSL_LIBRARY_DLL})
+               MESSAGE(STATUS "Found OpenSSL SSL library: ${OPENSSL_SSL_LIBRARY_DLL}")
+               SET(ISS_OPENSSL_LIBS "${ISS_OPENSSL_LIBS}\nSource: \"${OPENSSL_SSL_LIBRARY_DLL}\"; DestDir: \"{app}\"; Flags: ignoreversion")
+          ENDIF()
+          IF(EXISTS ${OPENSSL_CRYPTO_LIBRARY_DLL})
+               MESSAGE(STATUS "Found OpenSSL crypto library: ${OPENSSL_CRYPTO_LIBRARY_DLL}")
+               SET(ISS_OPENSSL_LIBS "${ISS_OPENSSL_LIBS}\nSource: \"${OPENSSL_CRYPTO_LIBRARY_DLL}\"; DestDir: \"{app}\"; Flags: ignoreversion")
+          ENDIF()
+          IF((NOT EXISTS ${OPENSSL_SSL_LIBRARY_DLL}) AND (NOT EXISTS ${OPENSSL_CRYPTO_LIBRARY_DLL}))
+               SET(ISS_OPENSSL_LIBS "; OpenSSL libraries not found")
+          ENDIF()
+    ENDIF()
 ENDIF()
 
 # when using Qt 5.3, default to using the old QGLWidget, but warn
@@ -562,12 +612,24 @@ ENDIF()
 ########### Get revision number for non-release builds ###########
 IF(NOT STELLARIUM_RELEASE_BUILD)
      # Hack until CMake detection for Git is finished
-     EXECUTE_PROCESS(COMMAND git rev-parse --abbrev-ref HEAD WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} TIMEOUT 30 OUTPUT_VARIABLE GIT_BRANCH OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_VARIABLE GIT_ERROR)
-     EXECUTE_PROCESS(COMMAND git rev-list --count ${GIT_BRANCH} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} TIMEOUT 30 OUTPUT_VARIABLE GIT_COMMITS OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_VARIABLE GIT_ERROR)
-     IF(GIT_COMMITS)
-          SET(PACKAGE_VERSION "${VERSION}.${GIT_COMMITS}")
-          ADD_DEFINITIONS(-DGIT_COMMITS="${GIT_COMMITS}")
-          ADD_DEFINITIONS(-DGIT_BRANCH="${GIT_BRANCH}")
+     IF(WIN32)
+          FIND_FILE(GITCMD git.exe)
+     ELSE()
+          FIND_FILE(GITCMD git)
+     ENDIF()
+     IF(EXISTS ${GITCMD})
+          EXECUTE_PROCESS(COMMAND git rev-parse --abbrev-ref HEAD WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} TIMEOUT 30 OUTPUT_VARIABLE GIT_BRANCH OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_VARIABLE GIT_ERROR)
+          EXECUTE_PROCESS(COMMAND git rev-list --count ${GIT_BRANCH} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} TIMEOUT 30 OUTPUT_VARIABLE GIT_COMMITS OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_VARIABLE GIT_ERROR)
+          IF(GIT_COMMITS)
+               SET(PACKAGE_VERSION "${VERSION}.${GIT_COMMITS}")
+               ADD_DEFINITIONS(-DGIT_COMMITS="${GIT_COMMITS}")
+               ADD_DEFINITIONS(-DGIT_BRANCH="${GIT_BRANCH}")
+          ENDIF()
+     ELSE()
+          STRING(TIMESTAMP TODAY "%j.%H%M")
+          SET(PACKAGE_VERSION "${VERSION}.${TODAY}")
+          ADD_DEFINITIONS(-DGIT_COMMITS="${TODAY}")
+          ADD_DEFINITIONS(-DGIT_BRANCH="unknown")
      ENDIF()
      # MESSAGE(STATUS "Branch: ${GIT_BRANCH}; Commits: ${GIT_COMMITS}; Error: ${GIT_ERROR}")
      IF(STELLARIUM_VERSION)
@@ -630,18 +692,6 @@ IF(WIN32)
 
      GET_FILENAME_COMPONENT(_qt_bin_dir "${QMAKE_LOCATION}" DIRECTORY)
      FIND_PROGRAM(WINDEPLOYQT_COMMAND windeployqt HINTS "${_qt_bin_dir}")
-
-     IF(MSVC)
-          # Use installer for checking minimum requirements
-          # Stellarium/MSVC require Windows Vista (6.0) for work
-          # Details: http://www.jrsoftware.org/ishelp/index.php?topic=winvernotes
-          SET(MIN_VERSION "6.0")
-     ELSE()
-          # Use installer for checking minimum requirements
-          # Stellarium/MinGW require Windows XP (5.1) for work
-          # Details: http://www.jrsoftware.org/ishelp/index.php?topic=winvernotes
-          SET(MIN_VERSION "5.1")
-     ENDIF()
 
      SET(ISS_STELLARIUM_STUFF "; Additional libraries")
      IF(ENABLE_SPOUT)
