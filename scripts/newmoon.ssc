@@ -1,6 +1,6 @@
 
 
-function sign(x) {
+function signum(x) {
     return x >= 0.0 ? 1 : -1;
 }
 
@@ -19,38 +19,41 @@ LabelMgr.setLabelShow(diffLabel, true);
 function toNextNewMoon() {
     var moonpos = core.getObjectInfo("Moon").ra;
     var sunpos = core.getObjectInfo("Sun").ra;
-    var moonposoffset = moonpos < 0 ? 360 : 0;
-    var sunposoffset = sunpos < 0 ? 360 : 0;
-    moonpos += moonposoffset;
-    sunpos += sunposoffset;
-    if (moonpos > sunpos) {
-        moonposoffset -= 360;
-        moonpos -= 360;
+    if (moonpos < 0) {
+        moonpos += 360;
     }
-    var RAdiff = moonpos - sunpos;
+
+    if (sunpos < 0) {
+        sunpos += 360;
+    }
+
+    var RAdiff = (moonpos - sunpos);
+
     var slow = false;
     core.setTimeRate(100000);
 
     for (;;) {
-        moonpos = core.getObjectInfo("Moon").ra + moonposoffset;
+        moonpos = core.getObjectInfo("Moon").ra;
         if (moonpos < 0) {
-            moonpos += 360.0;
-            moonposoffset += 360.0;
+            moonpos += 360;
         }
-        sunpos = core.getObjectInfo("Sun").ra + sunposoffset;
+
+        sunpos = core.getObjectInfo("Sun").ra;
         if (sunpos < 0) {
-            sunpos += 360.0;
-            sunposoffset += 360.0;
+            sunpos += 360;
         }
-        RAdiff = moonpos - sunpos;
+
+        RAdiff = (moonpos - sunpos);
+
         LabelMgr.setLabelText(moonRALabel, "Moon RA: " + moonpos);
         LabelMgr.setLabelText(sunRALabel, "Sun RA: " + sunpos);
         LabelMgr.setLabelText(diffLabel, "Diff RA: " + RAdiff);
-        if (RAdiff > -5 && !slow) {
-            core.setTimeRate(600);
+        if (abs(RAdiff) < 3 && !slow) {
+            core.setTimeRate(1000);
             slow = true;
         }
-        if (RAdiff > 0) {
+
+        if (abs(RAdiff) < 0.03) {
             break;
         }
         core.wait(0.1);
@@ -58,4 +61,28 @@ function toNextNewMoon() {
     core.setTimeRate(0);
 }
 
-toNextNewMoon();
+for (var i = 0; i < 14; ++i) {
+    toNextNewMoon();
+    core.output(core.getDate("utc"));
+    core.setMJDay(core.getMJDay()+20.0);
+    core.setTimeRate(600);
+    core.wait(2);
+}
+
+/*
+
+2019-12-26T05:09:51
+2020-01-24T21:53:55
+2020-02-23T10:22:08
+2020-03-24T04:46:54
+2020-04-23T00:27:07
+2020-05-22T16:17:15
+2020-06-21T06:13:40
+2020-07-20T16:11:54
+2020-08-19T01:07:53
+2020-09-17T06:39:26
+2020-10-16T16:25:17
+2020-11-15T04:13:22
+2020-12-14T15:55:10
+2021-01-13T04:21:30
+*/
