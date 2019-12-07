@@ -180,7 +180,7 @@ void CLIProcessor::parseCLIArgsPostConfig(const QStringList& argList, QSettings*
 	{
 		bool dumpOpenGLDetails = argsGetOption(argList, "-d", "--dump-opengl-details");
 		qApp->setProperty("dump_OpenGL_details", dumpOpenGLDetails);
-		fullScreen = argsGetYesNoOption(argList, "-f", "--full-screen", -1);
+		fullScreen = argsGetYesNoOption(argList, "-f", "--full-screen", 0);
 		landscapeId = argsGetOptionWithArg(argList, "", "--landscape", "").toString();
 		homePlanet = argsGetOptionWithArg(argList, "", "--home-planet", "").toString();
 		altitude = argsGetOptionWithArg(argList, "", "--altitude", -1).toInt();
