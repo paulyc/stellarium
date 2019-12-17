@@ -1,0 +1,286 @@
+
+
+function signum(x) {
+    return x >= 0.0 ? 1 : -1;
+}
+
+function abs(x) {
+    return x < 0.0 ? -x : x;
+}
+
+var moonRALabel = LabelMgr.labelScreen("Moon RA: ???", 20, 130, false, 20, '#ff0000');
+var sunRALabel = LabelMgr.labelScreen("Sun RA: ???", 20, 160, false, 20, '#ff0000');
+var angleLabel = LabelMgr.labelScreen("Angle: ???", 20, 190, false, 20, '#ff0000');
+
+function advanceSeconds(durationS) {
+    var date = core.getJDay();
+    date += durationS / 86400.0;
+    core.setJDay(date);
+}
+
+function getVars() {
+    var angle;
+    var date = core.getJDay();
+    var moonRA = core.getObjectInfo("Moon").ra;
+    if (moonRA < 0.0) { moonRA += 360.0; }
+    var sunRA  = core.getObjectInfo("Sun").ra;
+    if (sunRA < 0.0) { sunRA += 360.0; }
+    angle = abs(sunRA - moonRA) % 360.0;
+    var vars = {date:date, dateStr:core.getDate(), moonRA:moonRA, sunRA:sunRA, angle:angle};
+    core.output(JSON.stringify(vars));
+    return vars;
+}
+
+function showLabels(visibility) {
+    LabelMgr.setLabelShow(moonRALabel, visibility);
+    LabelMgr.setLabelShow(sunRALabel, visibility);
+    LabelMgr.setLabelShow(angleLabel, visibility);
+}
+
+function setLabels(vars) {
+    LabelMgr.setLabelText(moonRALabel, "Moon RA: " + vars.moonRA);
+    LabelMgr.setLabelText(sunRALabel, "Sun RA: " + vars.sunRA);
+    LabelMgr.setLabelText(angleLabel, "Angle: " + vars.angle);
+    showLabels(true);
+}
+
+// time between new moons always in range (29.0, 30.0)
+// use midpoint surface intersection algorithm on a line segment with beginning length 30 days
+// subdivide the line segment in halves , see which half has a lower difference
+//
+function findNextNewMoon() {
+    var varsNow = getVars();
+    var lastAngle = varsNow.angle;
+    var segmentLength = 1.0;
+
+    for (segmentLength = 8.0; segmentLength > 1.0/86400.0; segmentLength /= 2) {
+        var dateNow = core.getJDay();
+        varsNow = getVars();
+        setLabels(varsNow);
+        var dateThen = varsNow.date + segmentLength;
+        core.setJDay(dateThen);
+        var varsThen = getVars();
+        var dateMidpoint = varsNow.date + segmentLength / 2.0;
+        core.setJDay(dateMidpoint);
+        var varsMidpoint = getVars();
+        if (varsMidpoint.angle < varsNow.angle) {
+            core.setJDay(dateMidpoint);
+        } else {
+            core.setJDay(dateNow);
+        }
+    }
+}
+
+function setup() {
+    showLabels(true);
+    core.setTimeRate(0);
+    var varsNow = getVars();
+    var minAngle = varsNow.angle;
+    for (;;) {
+        core.setJDay(core.getJDay() + 1);
+        varsNow = getVars();
+
+        if (varsNow.angle > minAngle) {
+            core.setJDay(core.getJDay() - 4);
+            break;
+        } else {
+            minAngle = varsNow.angle;
+        }
+    }
+}
+
+function findNextNewMoon2() {
+    var varsNow, varsLater, angleDiff, jdiff;
+    jdiff = 1.0;
+    for (;;) {//varsNow = getVars(); varsNow.angle > 0.0; core.setJDay(core.getJDay() + 1.0)) {
+        varsNow = getVars();
+        core.setJDay(core.getJDay() + jdiff);
+        varsLater = getVars();
+        angleDiff = varsLater.angle - varsNow.angle;
+        if (angleDiff > 0.0) {
+            core.setJDay(core.getJDay() - 2*jdiff);
+            break;
+        }
+
+    }
+    jdiff = 1.0/24.0;
+    for (;;) {
+        varsNow = getVars();
+        core.setJDay(core.getJDay() + jdiff);
+        varsLater = getVars();
+        angleDiff = varsLater.angle - varsNow.angle;
+        if (angleDiff > 0.0) {
+            core.setJDay(core.getJDay() - 2*jdiff);
+            break;
+        }
+    }
+    jdiff = 1.0/(24.0 * 6.0);
+    for (;;) {
+        varsNow = getVars();
+        core.setJDay(core.getJDay() + jdiff);
+        varsLater = getVars();
+        angleDiff = varsLater.angle - varsNow.angle;
+        if (angleDiff > 0.0) {
+            core.setJDay(core.getJDay() - 2*jdiff);
+            break;
+        }
+    }
+}
+core.setJDay(2458835.0);
+//setup();
+for (var i = 0; i < 14; ++i) {
+    findNextNewMoon2();
+    core.output('New Moon: ' + core.getDate());
+    core.setJDay(core.getJDay() + 25.0);
+    core.wait(7);
+}
+
+/*
+
+  well its still fucked up because of the rollovers. must be some easy trick im missing here
+function signum(x) {
+    return x >= 0.0 ? 1 : -1;
+}
+
+function abs(x) {
+    return x < 0.0 ? -x : x;
+}
+
+var moonRALabel = LabelMgr.labelScreen("Moon RA: ???", 20, 130, false, 20, '#ff0000');
+var sunRALabel = LabelMgr.labelScreen("Sun RA: ???", 20, 160, false, 20, '#ff0000');
+var angleLabel = LabelMgr.labelScreen("Angle: ???", 20, 190, false, 20, '#ff0000');
+
+function advanceSeconds(durationS) {
+    var date = core.getJDay();
+    date += durationS / 86400.0;
+    core.setJDay(date);
+}
+
+var sunsign = signum(core.getObjectInfo("Sun").ra) < 0 ? 360 : 0;
+var moonsign = signum(core.getObjectInfo("Moon").ra) < 0 ? 360 : 0;
+function getVars() {
+    var angle;
+    var date = core.getJDay();
+    var moonRA = (core.getObjectInfo("Moon").ra + moonsign)%360.0;
+    //if (moonRA < 0.0) { moonRA += 360.0; }
+    var sunRA  = (core.getObjectInfo("Sun").ra + sunsign)%360.0;
+    if (sunRA < 0.0) { sunRA += 360.0; }
+    angle = abs(sunRA - moonRA) % 360.0;
+    var vars = {date:date, dateStr:core.getDate(), moonRA:moonRA, sunRA:sunRA, angle:angle};
+    core.output(JSON.stringify(vars));
+    return vars;
+}
+
+function showLabels(visibility) {
+    LabelMgr.setLabelShow(moonRALabel, visibility);
+    LabelMgr.setLabelShow(sunRALabel, visibility);
+    LabelMgr.setLabelShow(angleLabel, visibility);
+}
+
+function setLabels(vars) {
+    LabelMgr.setLabelText(moonRALabel, "Moon RA: " + vars.moonRA);
+    LabelMgr.setLabelText(sunRALabel, "Sun RA: " + vars.sunRA);
+    LabelMgr.setLabelText(angleLabel, "Angle: " + vars.angle);
+    showLabels(true);
+}
+
+// time between new moons always in range (29.0, 30.0)
+// use midpoint surface intersection algorithm on a line segment with beginning length 30 days
+// subdivide the line segment in halves , see which half has a lower difference
+//
+function findNextNewMoon() {
+    var varsNow = getVars();
+    var lastAngle = varsNow.angle;
+    var segmentLength = 1.0;
+
+    for (segmentLength = 8.0; segmentLength > 1.0/86400.0; segmentLength /= 2) {
+        var dateNow = core.getJDay();
+        varsNow = getVars();
+        setLabels(varsNow);
+        var dateThen = varsNow.date + segmentLength;
+        core.setJDay(dateThen);
+        var varsThen = getVars();
+        var dateMidpoint = varsNow.date + segmentLength / 2.0;
+        core.setJDay(dateMidpoint);
+        var varsMidpoint = getVars();
+        if (varsMidpoint.angle < varsNow.angle) {
+            core.setJDay(dateMidpoint);
+        } else {
+            core.setJDay(dateNow);
+        }
+    }
+}
+
+function setup() {
+    showLabels(true);
+    core.setTimeRate(0);
+    var varsNow = getVars();
+    var minAngle = varsNow.angle;
+    for (;;) {
+        core.setJDay(core.getJDay() + 1);
+        varsNow = getVars();
+
+        if (varsNow.angle > minAngle) {
+            core.setJDay(core.getJDay() - 4);
+            break;
+        } else {
+            minAngle = varsNow.angle;
+        }
+    }
+}
+
+function findNextNewMoon2() {
+    var varsNow, varsLater, angleDiff, jdiff;
+    jdiff = 1.0;
+    sunsign = signum(core.getObjectInfo("Sun").ra) < 0 ? 360 : 0;
+    moonsign = signum(core.getObjectInfo("Moon").ra) < 0 ? 360 : 0;
+    for (;;) {//varsNow = getVars(); varsNow.angle > 0.0; core.setJDay(core.getJDay() + 1.0)) {
+        varsNow = getVars();
+        core.setJDay(core.getJDay() + jdiff);
+        if (sunsign === 360 && signum(core.getObjectInfo("Sun").ra) > 0 || sunsign === 0 && signum(core.getObjectInfo("Sun").ra) < 0) {
+            sunsign += 360;
+        }
+        if (moonsign === 360 && signum(core.getObjectInfo("Moon").ra) > 0 || moonsign === 0 && signum(core.getObjectInfo("Moon").ra) < 0) {
+            moonsign += 360;
+        }
+
+        varsLater = getVars();
+        angleDiff = varsLater.angle - varsNow.angle;
+        if (angleDiff > 0.0) {
+            core.setJDay(core.getJDay() - 2*jdiff);
+            break;
+        }
+
+    }
+    jdiff = 1.0/24.0;
+    for (;;) {
+        varsNow = getVars();
+        core.setJDay(core.getJDay() + jdiff);
+        varsLater = getVars();
+        angleDiff = varsLater.angle - varsNow.angle;
+        if (angleDiff > 0.0) {
+            core.setJDay(core.getJDay() - 2*jdiff);
+            break;
+        }
+    }
+    jdiff = 1.0/(24.0 * 12.0);
+    for (;;) {
+        varsNow = getVars();
+        core.setJDay(core.getJDay() + jdiff);
+        varsLater = getVars();
+        angleDiff = varsLater.angle - varsNow.angle;
+        if (angleDiff > 0.0) {
+            core.setJDay(core.getJDay() - 2*jdiff);
+            break;
+        }
+    }
+}
+core.setJDay(2458835.0);
+//setup();
+for (var i = 0; i < 14; ++i) {
+    findNextNewMoon2();
+    core.output('New Moon: ' + core.getDate());
+    core.setJDay(core.getJDay() + 25.0);
+    core.wait(7);
+}
+*/
