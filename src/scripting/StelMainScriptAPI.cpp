@@ -113,6 +113,7 @@ StelMainScriptAPI::~StelMainScriptAPI()
 void StelMainScriptAPI::setJDay(double JD)
 {
 	StelApp::getInstance().getCore()->setJD(JD);
+	StelApp::getInstance().getCore()->update(0);
 }
 
 //! Get the current date in Julian Day
@@ -127,6 +128,7 @@ double StelMainScriptAPI::getJDay()
 void StelMainScriptAPI::setMJDay(double MJD)
 {
 	StelApp::getInstance().getCore()->setMJDay(MJD);
+	StelApp::getInstance().getCore()->update(0);
 }
 
 //! Get the current date in Modified Julian Day
