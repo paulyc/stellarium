@@ -96,6 +96,22 @@ std::string string_format(const char *format, ...)
     return formatted;
 }
 
+typedef double vec3d_t[3];
+typedef vec3d_t pv_t[2];
+typedef std::array<long double, 2> vec2q_t;
+
+long double normalize(vec3d_t &v)
+{
+    const long double x = static_cast<long double>(v[0]);
+    const long double y = static_cast<long double>(v[1]);
+    const long double z = static_cast<long double>(v[2]);
+    const long double mag = sqrtl(x*x+y*y+z*z);
+    v[0] = static_cast<double>(x/mag);
+    v[1] = static_cast<double>(y/mag);
+    v[2] = static_cast<double>(z/mag);
+    return mag;
+}
+
 class JPLEphems
 {
     static constexpr size_t MAX_CONSTANTS = 1024;
@@ -121,8 +137,6 @@ public:
         TT_TDB                = 17,
     };
 
-    typedef double vec3d_t[3];
-    typedef vec3d_t pv_t[2];
     struct State
     {
         union {
@@ -130,7 +144,22 @@ public:
             vec3d_t position;
             vec3d_t velocity;
         };
-        long double get_ra() const { return atanl(static_cast<long double>(position[1]) / static_cast<long double>(position[0])); }
+        long double get_ra() const {
+            vec3d_t normal = {position[0], position[1], position[2]};
+            normalize(normal);
+            return atanl(static_cast<long double>(normal[1]) / static_cast<long double>(normal[0]));
+        }
+        vec2q_t magphase(const State &other) {
+            vec2q_t magphase;
+            vec3d_t this_normal = {position[0], position[1], position[2]};
+            normalize(this_normal);
+            vec3d_t other_normal = {other.position[0], other.position[1], other.position[2]};
+            normalize(other_normal);
+            vec3d_t sum = {this_normal[0] + other_normal[0], this_normal[1] + other_normal[1], this_normal[2] + other_normal[2]};
+            magphase[0] = sqrtl(static_cast<long double>(sum[0])*static_cast<long double>(sum[0])+static_cast<long double>(sum[1])*static_cast<long double>(sum[1]));
+            magphase[1] = atanl(static_cast<long double>(sum[1]) / static_cast<long double>(sum[0]));
+            return magphase;
+        }
     };
     JPLEphems() = default;
     ~JPLEphems()
@@ -163,20 +192,6 @@ private:
     jpl_eph_data *_ephdata;
 };
 
-/*
- * struct steady_clock
-    {
-      typedef chrono::nanoseconds 				duration;
-      typedef duration::rep	  				rep;
-      typedef duration::period	  				period;
-      typedef chrono::time_point<steady_clock, duration> 	time_point;
-
-      static constexpr bool is_steady = true;
-
-      static time_point
-      now() noexcept;
-    };
-*/
 #define DELTA_T_USE_MOON 0
 struct julian_clock : public std::chrono::steady_clock
 {
@@ -246,27 +261,22 @@ int main()
     julian_clock::time_point now = julian_clock::now();
 
     // just find the time when its the minimum
-    double mindiffra = 100.0;
-    std::chrono::system_clock::time_point mintp = t;
-    for (int i = 0; i < 15*24; ++i) {
-        now += std::chrono::seconds(3600);
-        t += std::chrono::seconds(3600);
+    long double minmag = 2.0l;
+    std::chrono::system_clock::time_point mintp = std::chrono::system_clock::now();
+    for (int i = 0; i < 29*24*60; ++i) {
+        now += std::chrono::seconds(60);
+        t += std::chrono::seconds(60);
         const double jde_now = static_cast<double>(julian_clock::point_to_jde(now));
-        JPLEphems::State s = _de431.get_state(jde_now, JPLEphems::Earth, JPLEphems::Moon);
-        const double ra_moon = s.get_ra();
-        std::cout << "Moon ra " << ra_moon << " at date " << t << std::endl;
-        s = _de431.get_state(jde_now, JPLEphems::Earth, JPLEphems::Sun);
-        const double ra_sun = s.get_ra();
-        std::cout << " Sun ra " << ra_sun << " at date " << t << std::endl;
-        const double ra_diff = ra_sun - ra_moon;
-        std::cout << " Diff ra " << ra_diff << " (abs " << abs(ra_diff) << ") at date " << t << std::endl;
-        // no idea wtf is going on here why its not finding the minimum but its just a bookkeeping bug
-        if (abs(ra_diff) < mindiffra) {
-            mindiffra = abs(ra_diff);
+        JPLEphems::State sm = _de431.get_state(jde_now, JPLEphems::Earth, JPLEphems::Moon);
+        JPLEphems::State ss = _de431.get_state(jde_now, JPLEphems::Sun, JPLEphems::EarthMoonBarycenter);
+        vec2q_t magphase = sm.magphase(ss);
+        std::cout << "Magnitude " << magphase[0] << " Angle " << magphase[1] << " at date " << t << std::endl;
+        if (magphase[0] < minmag) {
+            minmag = magphase[0];
             mintp = t;
         }
     }
-    std::cout << "minphasediff " << mindiffra << " at time " << t << std::endl;
+    std::cout << "minmag " << minmag << " at time " << mintp << std::endl;
 
     std::cout << "goodbye newmoon" << std::endl;
     return 0;
