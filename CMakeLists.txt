@@ -1,6 +1,10 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12)
 MESSAGE(STATUS "Found CMake ${CMAKE_VERSION}")
 
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 IF(POLICY CMP0054)
 # Potential dangerous comparison of variables. Details: https://cmake.org/cmake/help/v3.1/policy/CMP0054.html
      CMAKE_POLICY(SET CMP0054 NEW)
