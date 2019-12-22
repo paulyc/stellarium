@@ -188,10 +188,11 @@ int main()
     JPLEphems _de430t;
     JPLEphems _de431;
 
-   //std::chrono::steady_clock::time_point
     std::chrono::system_clock::time_point t = std::chrono::system_clock::now();
-    std::cout << "hello newmoon " << t << std::endl;
+    julian_clock::time_point jd = julian_clock::now();
 
+    std::cout << "hello newmoon " << t << std::endl;
+    timespec ts = {5,0}; //5.000000000s
     try {
         _de430.init("/home/paulyc/Development/stellarium/ephem/linux_p1550p2650.430");
         _de430t.init("/home/paulyc/Development/stellarium/ephem/linux_p1550p2650.430t");
@@ -201,25 +202,36 @@ int main()
         return 1;
     }
 
-    julian_clock::time_point now = julian_clock::now();
-
-    // just find the time when its the minimum
-    long double minmag = 2.0l;
-    std::chrono::system_clock::time_point mintp = std::chrono::system_clock::now();
-    for (int i = 0; i < 29*24*60; ++i) {
-        now += std::chrono::seconds(60);
-        t += std::chrono::seconds(60);
-        const double jde_now = static_cast<double>(julian_clock::point_to_jde(now));
-        JPLEphems::State sm = _de431.get_state(jde_now, JPLEphems::Earth, JPLEphems::Moon);
-        JPLEphems::State ss = _de431.get_state(jde_now, JPLEphems::Sun, JPLEphems::EarthMoonBarycenter);
-        vec2q_t magphase = sm.ra_magphase(ss);
-        std::cout << "Magnitude " << magphase[0] << " Angle " << magphase[1] << " at date " << t << std::endl;
-        if (magphase[0] < minmag) {
-            minmag = magphase[0];
-            mintp = t;
+    // generate newmoons every ts seconds forever
+    for (;;) {
+        // just find the time when its the minimum
+        long double lastmags[2] = {-3.0l};
+        size_t lastmag_indx = 0;
+        long double minmag = 3.0l;
+        std::chrono::system_clock::time_point mintp = std::chrono::system_clock::now();
+        for (int i = 0; i < 29*24*60; ++i) {
+            jd += std::chrono::seconds(60);
+            t += std::chrono::seconds(60);
+            const double jde_now = static_cast<double>(julian_clock::point_to_jde(jd));
+            JPLEphems::State sm = _de431.get_state(jde_now, JPLEphems::Earth, JPLEphems::Moon);
+            JPLEphems::State ss = _de431.get_state(jde_now, JPLEphems::Sun, JPLEphems::EarthMoonBarycenter);
+            vec2q_t magphase = sm.ra_magphase(ss);
+            const long double mag = magphase[0];
+            const long double lastmag = lastmags[lastmag_indx % 2];
+            ++lastmag_indx;
+            lastmags[lastmag_indx % 2] = mag;
+            const long double dmag = mag - lastmag;
+            //std::cout << "Magnitude " << magphase[0] << " Angle " << magphase[1] << " at date " << t << std::endl;
+            if (mag < minmag && dmag < 0.0l) {
+                minmag = mag;
+                mintp = t;
+            } else if (mag > 1.0l && minmag < 0.1l && dmag > 0.0l) {
+                break;
+            }
         }
+        std::cout << "minmag (newmoon) " << minmag << " at mintp " << mintp << std::endl;
+        nanosleep(&ts, nullptr);
     }
-    std::cout << "minmag (newmoon) " << minmag << " at mintp " << mintp << std::endl;
 
     std::cout << "goodbye newmoon" << std::endl;
     return 0;
