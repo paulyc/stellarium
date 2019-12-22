@@ -1,10 +1,6 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.8.0)
 MESSAGE(STATUS "Found CMake ${CMAKE_VERSION}")
 
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 IF(POLICY CMP0054)
 # Potential dangerous comparison of variables. Details: https://cmake.org/cmake/help/v3.1/policy/CMP0054.html
      CMAKE_POLICY(SET CMP0054 NEW)
@@ -183,7 +179,7 @@ ENDIF()
 # Set whether to try using C++11 when compiling. Required for Qt >= 5.7"
 IF(NOT (CMAKE_VERSION VERSION_LESS 3.1.0))
      # Let CMake handle setting C++11 (since 3.1)
-     SET(CMAKE_CXX_STANDARD 11)
+     SET(CMAKE_CXX_STANDARD 20)
      SET(CMAKE_C_STANDARD 11)
 ELSE()
      # Add std=c++11 to gcc flags
