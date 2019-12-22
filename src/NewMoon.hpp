@@ -17,6 +17,29 @@
  * Foundation, Inc., 51 Franklin Street, Suite 500, Boston, MA  02110-1335, USA.
  */
 
+#include <functional>
+#include <optional>
+#include <string>
+#include <cstring>
+#include <cstdarg>
+
+std::string string_format(const char *format, ...)
+{
+    va_list args;
+    va_start (args, format);
+    int len = std::vsnprintf(nullptr, 0, format, args);
+    if (len < 0) {
+        throw std::runtime_error(strerror(errno));
+    }
+    va_end (args);
+    const size_t slen = static_cast<size_t>(len) + 1;
+    std::string formatted(slen, '\0');
+    va_start (args, format);
+    std::vsnprintf(formatted.data(), slen, format, args);
+    va_end (args);
+    return formatted;
+}
+
 template<typename Left_T, typename Right_T>
 class Either
 {

@@ -21,15 +21,10 @@
 #include <iomanip>
 #include <memory>
 #include <exception>
-#include <optional>
 #include <chrono>
 #include <ctime>
 #include <array>
 #include <variant>
-#include <functional>
-#include <cstdarg>
-#include <cstring>
-#include <string>
 
 #include "jpleph.h"
 #include "de430.hpp"
@@ -39,23 +34,6 @@
 #include "NewMoon.hpp"
 
 struct jpl_eph_data;
-
-std::string string_format(const char *format, ...)
-{
-    va_list args;
-    va_start (args, format);
-    int len = std::vsnprintf(nullptr, 0, format, args);
-    if (len < 0) {
-        throw std::runtime_error(strerror(errno));
-    }
-    va_end (args);
-    const size_t slen = static_cast<size_t>(len) + 1;
-    std::string formatted(slen, '\0');
-    va_start (args, format);
-    std::vsnprintf(formatted.data(), slen, format, args);
-    va_end (args);
-    return formatted;
-}
 
 typedef double vec3d_t[3];
 typedef vec3d_t pv_t[2];
@@ -180,12 +158,20 @@ struct julian_clock : public std::chrono::steady_clock
 
         const std::chrono::system_clock::time_point t = std::chrono::system_clock::now();
         const std::time_t unixtime = std::chrono::system_clock::to_time_t(t); // seconds (incl. dt) since 1970-01-01T00:00:00.000Z (UT)
+        // dont think this is quite right because it is calculating the unix epoch in jdays ignoring deltaT!
+        // it might be more wrong than simply returning getJDFromSystem * 86400 Ill have to check TODO
         const long double unixjdays = unixtime / seconds_per_jday;
         const long double jdunixepoch = static_cast<long double>(jd) - unixjdays;
         const long double deltat_unixepoch = static_cast<long double>(StelUtils::getDeltaTByEspenakMeeus(static_cast<double>(jdunixepoch)));
         const long double deltat_unixtime = static_cast<long double>(deltat_now) - deltat_unixepoch;
         const long double jde = static_cast<long double>(jd) + deltat_unixtime/86400.0l;
         return time_point(std::chrono::seconds(static_cast<int64_t>(floorl(jde * 86400.0l))));
+    }
+
+    static time_point from_unixtime(const std::chrono::system_clock::time_point &t) {
+        throw std::runtime_error("Not implemented.");
+        //const std::time_t unixtime = std::chrono::system_clock::to_time_t(t); // seconds (incl. dt) since 1970-01-01T00:00:00.000Z (UT)
+        //const long double unixjdays = unixtime / seconds_per_jday;
     }
 };
 
