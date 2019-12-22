@@ -1,3 +1,22 @@
+/*
+ * Stellarium
+ * Copyright (C) 2019 Paul Ciarlo
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Suite 500, Boston, MA  02110-1335, USA.
+ */
+
 #include <iostream>
 #include <iomanip>
 #include <memory>
@@ -17,67 +36,9 @@
 #include "de431.hpp"
 #include "StelUtils.hpp"
 
+#include "NewMoon.hpp"
+
 struct jpl_eph_data;
-
-#if 0
-class JPLEphError : public std::exception
-{
-public:
-    JPLEphError() : _errcode(jpl_init_error_code()), _errmsg(jpl_init_error_message()) {}
-private:
-    int _errcode;
-    const char *_errmsg;
-};
-#endif
-
-template<typename Left_T, typename Right_T>
-class Either
-{
-private:
-    enum Which {
-        Left,
-        Right,
-    } _which;
-    union {
-        Left_T left;
-        Right_T right;
-    } _value;
-public:
-    Either() = delete;
-    explicit Either(Left_T left) : _which(Left), _value(left) {}
-    explicit Either(Right_T right) : _which(Right), _value(right) {}
-
-    bool has_left() const { return _which == Left; }
-    bool has_right() const { return _which == Right; }
-    std::optional<const Left_T&> try_left() const { return has_left() ? std::make_optional(&_value.left) : std::nullopt; }
-    std::optional<const Right_T&> try_right() const { return has_right() ? std::make_optional(&_value.right) : std::nullopt; }
-
-    static constexpr std::function<Left_T(Left_T)> LeftIdentityFun = [](Left_T left) {return left;};
-    static constexpr std::function<Right_T(Right_T)> RightIdentityFun = [](Right_T right) {return right;};
-
-    template <typename Left_Map_T, typename Right_Map_T>
-    Either<Left_Map_T, Right_Map_T> map(const std::function<Left_Map_T(Left_T)> &lfun, const std::function<Right_Map_T(Right_T)> &rfun)
-    {
-        if (has_left()) {
-            return Either<Left_Map_T, Right_Map_T>(lfun(_value.left));
-        } else {
-            return Either<Left_Map_T, Right_Map_T>(rfun(_value.right));
-        }
-    }
-
-    template <typename Map_T>
-    Either<Map_T, Right_T> map_left(const std::function<Map_T(Left_T)> &fun)
-    {
-        return this->map(fun, RightIdentityFun);
-    }
-    template <typename Map_T>
-    Either<Left_T, Map_T> map_right(const std::function<Map_T(Right_T)> &fun)
-    {
-        return this->map(LeftIdentityFun, fun);
-    }
-private:
-
-};
 
 std::string string_format(const char *format, ...)
 {
@@ -144,12 +105,7 @@ public:
             vec3d_t position;
             vec3d_t velocity;
         };
-        long double get_ra() const {
-            vec3d_t normal = {position[0], position[1], position[2]};
-            normalize(normal);
-            return atanl(static_cast<long double>(normal[1]) / static_cast<long double>(normal[0]));
-        }
-        vec2q_t magphase(const State &other) {
+        vec2q_t ra_magphase(const State &other) {
             vec2q_t magphase;
             vec3d_t this_normal = {position[0], position[1], position[2]};
             normalize(this_normal);
@@ -204,6 +160,7 @@ struct julian_clock : public std::chrono::steady_clock
     //static constexpr const std::function<double(double)> deltaTfunc = StelUtils::getDeltaTByEspenakMeeus;
     static constexpr int deltaTstart	= -1999;
     static constexpr int deltaTfinish	= 3000;
+    static constexpr long double seconds_per_jday = 86400.0l * 365.25l;
     typedef std::chrono::seconds duration;
     typedef std::chrono::time_point<julian_clock, duration> 	time_point;
 
@@ -222,8 +179,8 @@ struct julian_clock : public std::chrono::steady_clock
 #endif
 
         const std::chrono::system_clock::time_point t = std::chrono::system_clock::now();
-        const std::time_t unixtime = std::chrono::system_clock::to_time_t(t); // seconds since 1970-01-01T00:00:00.000Z
-        const long double unixjdays = unixtime / (86400.0l * 365.25l);
+        const std::time_t unixtime = std::chrono::system_clock::to_time_t(t); // seconds (incl. dt) since 1970-01-01T00:00:00.000Z (UT)
+        const long double unixjdays = unixtime / seconds_per_jday;
         const long double jdunixepoch = static_cast<long double>(jd) - unixjdays;
         const long double deltat_unixepoch = static_cast<long double>(StelUtils::getDeltaTByEspenakMeeus(static_cast<double>(jdunixepoch)));
         const long double deltat_unixtime = static_cast<long double>(deltat_now) - deltat_unixepoch;
@@ -269,14 +226,14 @@ int main()
         const double jde_now = static_cast<double>(julian_clock::point_to_jde(now));
         JPLEphems::State sm = _de431.get_state(jde_now, JPLEphems::Earth, JPLEphems::Moon);
         JPLEphems::State ss = _de431.get_state(jde_now, JPLEphems::Sun, JPLEphems::EarthMoonBarycenter);
-        vec2q_t magphase = sm.magphase(ss);
+        vec2q_t magphase = sm.ra_magphase(ss);
         std::cout << "Magnitude " << magphase[0] << " Angle " << magphase[1] << " at date " << t << std::endl;
         if (magphase[0] < minmag) {
             minmag = magphase[0];
             mintp = t;
         }
     }
-    std::cout << "minmag " << minmag << " at time " << mintp << std::endl;
+    std::cout << "minmag (newmoon) " << minmag << " at mintp " << mintp << std::endl;
 
     std::cout << "goodbye newmoon" << std::endl;
     return 0;
