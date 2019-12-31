@@ -32,23 +32,34 @@
 #include "StelUtils.hpp"
 
 #include "NewMoon.hpp"
+#include "Chrono.hpp"
 
+/*
+ * delta-T =
+      ET - UT   prior to 1984
+      TDT - UT  1984 - 2000
+      TT - UT   from 2001 and on
+
+      delta-UT =  UT - UTC
+      unixtime: no leap seconds, so UT
+      */
 struct jpl_eph_data;
 
 typedef double vec3d_t[3];
 typedef vec3d_t pv_t[2];
 typedef std::array<long double, 2> vec2q_t;
+typedef std::array<long double, 3> vec3q_t;
 
-long double normalize(vec3d_t &v)
+vec3q_t normalize(const vec3d_t &v)
 {
     const long double x = static_cast<long double>(v[0]);
     const long double y = static_cast<long double>(v[1]);
     const long double z = static_cast<long double>(v[2]);
     const long double mag = sqrtl(x*x+y*y+z*z);
-    v[0] = static_cast<double>(x/mag);
-    v[1] = static_cast<double>(y/mag);
-    v[2] = static_cast<double>(z/mag);
-    return mag;
+   // v[0] = static_cast<double>(x/mag);
+   // v[1] = static_cast<double>(y/mag);
+   // v[2] = static_cast<double>(z/mag);
+    return {x/mag,y/mag,z/mag};
 }
 
 class JPLEphems
@@ -85,13 +96,13 @@ public:
         };
         vec2q_t ra_magphase(const State &other) {
             vec2q_t magphase;
-            vec3d_t this_normal = {position[0], position[1], position[2]};
-            normalize(this_normal);
-            vec3d_t other_normal = {other.position[0], other.position[1], other.position[2]};
-            normalize(other_normal);
-            vec3d_t sum = {this_normal[0] + other_normal[0], this_normal[1] + other_normal[1], this_normal[2] + other_normal[2]};
-            magphase[0] = sqrtl(static_cast<long double>(sum[0])*static_cast<long double>(sum[0])+static_cast<long double>(sum[1])*static_cast<long double>(sum[1]));
-            magphase[1] = atanl(static_cast<long double>(sum[1]) / static_cast<long double>(sum[0]));
+            vec3d_t this_ = {position[0], position[1], position[2]};
+            vec3q_t this_normal = normalize(this_);
+            vec3d_t that = {other.position[0], other.position[1], other.position[2]};
+            vec3q_t that_normal = normalize(that);
+            vec3q_t sum = {this_normal[0] + that_normal[0], this_normal[1] + that_normal[1], this_normal[2] + that_normal[2]};
+            magphase[0] = sqrtl(sum[0]*sum[0]+sum[1]*sum[1]);
+            magphase[1] = atanl(sum[1] / sum[0]);
             return magphase;
         }
     };
@@ -126,70 +137,18 @@ private:
     jpl_eph_data *_ephdata;
 };
 
-#define DELTA_T_USE_MOON 0
-struct julian_clock : public std::chrono::steady_clock
-{
-    // epoch = noon Universal Time (UT) Monday, 1 January 4713 BCE Julian
-    // jd2000 epoch = 2451545.0 = TT 12:00:00.000 (UTC 11:58:55.816) 1 January 2000 CE Gregorian
-    static constexpr double JD2000_EPOCH = 2451545.0;
-    //static constexpr bool DELTA_T_USE_MOON = true;
-    // Espenak & Meeus (2006) algorithm for DeltaT
-    static constexpr double deltaTnDot = -25.858; // n.dot = -25.858 "/cy/cy
-    //static constexpr const std::function<double(double)> deltaTfunc = StelUtils::getDeltaTByEspenakMeeus;
-    static constexpr int deltaTstart	= -1999;
-    static constexpr int deltaTfinish	= 3000;
-    static constexpr long double seconds_per_jday = 86400.0l * 365.25l;
-    typedef std::chrono::seconds duration;
-    typedef std::chrono::time_point<julian_clock, duration> 	time_point;
-
-    static long double point_to_jde(const time_point &tp) {
-        return tp.time_since_epoch().count() / 86400.0l;
-    }
-
-    static time_point now() noexcept {
-        const double jd = StelUtils::getJDFromSystem();
-        const double deltat_now = StelUtils::getDeltaTByEspenakMeeus(jd);
-
-#if DELTA_T_USE_MOON
-        if (DELTA_T_USE_MOON) {
-            deltat += StelUtils::getMoonSecularAcceleration(jd, deltaTnDot, ((de430Active&&EphemWrapper::jd_fits_de430(JD)) || (de431Active&&EphemWrapper::jd_fits_de431(JD))));
-        }
-#endif
-
-        const std::chrono::system_clock::time_point t = std::chrono::system_clock::now();
-        const std::time_t unixtime = std::chrono::system_clock::to_time_t(t); // seconds (incl. dt) since 1970-01-01T00:00:00.000Z (UT)
-        // dont think this is quite right because it is calculating the unix epoch in jdays ignoring deltaT!
-        // it might be more wrong than simply returning getJDFromSystem * 86400 Ill have to check TODO
-        const long double unixjdays = unixtime / seconds_per_jday;
-        const long double jdunixepoch = static_cast<long double>(jd) - unixjdays;
-        const long double deltat_unixepoch = static_cast<long double>(StelUtils::getDeltaTByEspenakMeeus(static_cast<double>(jdunixepoch)));
-        const long double deltat_unixtime = static_cast<long double>(deltat_now) - deltat_unixepoch;
-        const long double jde = static_cast<long double>(jd) + deltat_unixtime/86400.0l;
-        return time_point(std::chrono::seconds(static_cast<int64_t>(floorl(jde * 86400.0l))));
-    }
-
-    static time_point from_unixtime(const std::chrono::system_clock::time_point &t) {
-        throw std::runtime_error("Not implemented.");
-        //const std::time_t unixtime = std::chrono::system_clock::to_time_t(t); // seconds (incl. dt) since 1970-01-01T00:00:00.000Z (UT)
-        //const long double unixjdays = unixtime / seconds_per_jday;
-    }
-};
-
-std::ostream& operator<<(std::ostream &os, const std::chrono::system_clock::time_point &rhs)
-{
-    const std::time_t tt = std::chrono::system_clock::to_time_t(rhs);
-    os << std::put_time(std::gmtime(&tt),"%FT%T%z (%Z)");
-    return os;
-}
-
-int main()
+int run()
 {
     JPLEphems _de430;
     JPLEphems _de430t;
     JPLEphems _de431;
 
+    char tzbuf[] = "TZ=UTC";
+    putenv(tzbuf);
+  //  julian_clock::test_delta_t_lerp();
+
     std::chrono::system_clock::time_point t = std::chrono::system_clock::now();
-    julian_clock::time_point jd = julian_clock::now();
+    jd_clock::time_point jd = jd_clock::now();
 
     std::cout << "hello newmoon " << t << std::endl;
     timespec ts = {5,0}; //5.000000000s
@@ -210,11 +169,12 @@ int main()
         long double minmag = 3.0l;
         std::chrono::system_clock::time_point mintp = std::chrono::system_clock::now();
         for (int i = 0; i < 29*24*60; ++i) {
-            jd += std::chrono::seconds(60);
+            jd += fracdays(60.0/86400.0);
             t += std::chrono::seconds(60);
-            const double jde_now = static_cast<double>(julian_clock::point_to_jde(jd));
-            JPLEphems::State sm = _de431.get_state(jde_now, JPLEphems::Earth, JPLEphems::Moon);
-            JPLEphems::State ss = _de431.get_state(jde_now, JPLEphems::Sun, JPLEphems::EarthMoonBarycenter);
+            //const double jd_now = static_cast<double>(julian_clock::point_to_jde(jd));
+            const double jd_now = static_cast<double>(fracdays(jd.time_since_epoch()).count());
+            JPLEphems::State sm = _de431.get_state(jd_now, JPLEphems::Earth, JPLEphems::Moon);
+            JPLEphems::State ss = _de431.get_state(jd_now, JPLEphems::Sun, JPLEphems::EarthMoonBarycenter);
             vec2q_t magphase = sm.ra_magphase(ss);
             const long double mag = magphase[0];
             const long double lastmag = lastmags[lastmag_indx % 2];
@@ -225,7 +185,7 @@ int main()
             if (mag < minmag && dmag < 0.0l) {
                 minmag = mag;
                 mintp = t;
-            } else if (mag > 1.0l && minmag < 0.1l && dmag > 0.0l) {
+            } else if (mag > 1.0l && minmag < 0.01l && dmag > 0.0l) {
                 break;
             }
         }
@@ -235,4 +195,22 @@ int main()
 
     std::cout << "goodbye newmoon" << std::endl;
     return 0;
+}
+
+int test() {
+    //julian_clock::time_point tp = julian_clock::now();
+    auto jd = jd_clock::now();
+    std::cout << jd_clock::now() << std::endl;
+    std::cout << (double)jd.time_since_epoch().count() << std::endl;
+    const double jd_now = static_cast<double>(fracdays(jd.time_since_epoch()).count());
+    std::cout << jd_now << std::endl;
+    return 0;
+}
+
+int main() {
+#if 1
+    return run();
+#else
+    return test();
+#endif
 }
