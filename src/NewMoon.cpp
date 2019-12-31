@@ -137,7 +137,7 @@ private:
     jpl_eph_data *_ephdata;
 };
 
-int main()
+int run()
 {
     JPLEphems _de430;
     JPLEphems _de430t;
@@ -148,7 +148,7 @@ int main()
   //  julian_clock::test_delta_t_lerp();
 
     std::chrono::system_clock::time_point t = std::chrono::system_clock::now();
-    julian_clock::time_point jd = julian_clock::now();
+    jd_clock::time_point jd = jd_clock::now();
 
     std::cout << "hello newmoon " << t << std::endl;
     timespec ts = {5,0}; //5.000000000s
@@ -169,11 +169,12 @@ int main()
         long double minmag = 3.0l;
         std::chrono::system_clock::time_point mintp = std::chrono::system_clock::now();
         for (int i = 0; i < 29*24*60; ++i) {
-            jd += julian_clock::duration(60.0l/86400.0l);
+            jd += fracdays(60.0/86400.0);
             t += std::chrono::seconds(60);
             //const double jd_now = static_cast<double>(julian_clock::point_to_jde(jd));
-            JPLEphems::State sm = _de431.get_state(jd.time_since_epoch().count(), JPLEphems::Earth, JPLEphems::Moon);
-            JPLEphems::State ss = _de431.get_state(jd.time_since_epoch().count(), JPLEphems::Sun, JPLEphems::EarthMoonBarycenter);
+            const double jd_now = static_cast<double>(fracdays(jd.time_since_epoch()).count());
+            JPLEphems::State sm = _de431.get_state(jd_now, JPLEphems::Earth, JPLEphems::Moon);
+            JPLEphems::State ss = _de431.get_state(jd_now, JPLEphems::Sun, JPLEphems::EarthMoonBarycenter);
             vec2q_t magphase = sm.ra_magphase(ss);
             const long double mag = magphase[0];
             const long double lastmag = lastmags[lastmag_indx % 2];
@@ -194,4 +195,22 @@ int main()
 
     std::cout << "goodbye newmoon" << std::endl;
     return 0;
+}
+
+int test() {
+    //julian_clock::time_point tp = julian_clock::now();
+    auto jd = jd_clock::now();
+    std::cout << jd_clock::now() << std::endl;
+    std::cout << (double)jd.time_since_epoch().count() << std::endl;
+    const double jd_now = static_cast<double>(fracdays(jd.time_since_epoch()).count());
+    std::cout << jd_now << std::endl;
+    return 0;
+}
+
+int main() {
+#if 1
+    return run();
+#else
+    return test();
+#endif
 }
