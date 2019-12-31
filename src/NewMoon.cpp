@@ -34,15 +34,6 @@
 #include "NewMoon.hpp"
 #include "Chrono.hpp"
 
-/*
- * delta-T =
-      ET - UT   prior to 1984
-      TDT - UT  1984 - 2000
-      TT - UT   from 2001 and on
-
-      delta-UT =  UT - UTC
-      unixtime: no leap seconds, so UT
-      */
 struct jpl_eph_data;
 
 typedef double vec3d_t[3];
@@ -55,11 +46,8 @@ vec3q_t normalize(const vec3d_t &v)
     const long double x = static_cast<long double>(v[0]);
     const long double y = static_cast<long double>(v[1]);
     const long double z = static_cast<long double>(v[2]);
-    const long double mag = sqrtl(x*x+y*y+z*z);
-   // v[0] = static_cast<double>(x/mag);
-   // v[1] = static_cast<double>(y/mag);
-   // v[2] = static_cast<double>(z/mag);
-    return {x/mag,y/mag,z/mag};
+    const long double mag = sqrtl(x*x+y*y);
+    return {x/mag,y/mag,z};
 }
 
 class JPLEphems
@@ -96,10 +84,8 @@ public:
         };
         vec2q_t ra_magphase(const State &other) {
             vec2q_t magphase;
-            vec3d_t this_ = {position[0], position[1], position[2]};
-            vec3q_t this_normal = normalize(this_);
-            vec3d_t that = {other.position[0], other.position[1], other.position[2]};
-            vec3q_t that_normal = normalize(that);
+            vec3q_t this_normal = normalize(position);
+            vec3q_t that_normal = normalize(other.position);
             vec3q_t sum = {this_normal[0] + that_normal[0], this_normal[1] + that_normal[1], this_normal[2] + that_normal[2]};
             magphase[0] = sqrtl(sum[0]*sum[0]+sum[1]*sum[1]);
             magphase[1] = atanl(sum[1] / sum[0]);
@@ -145,7 +131,7 @@ int run()
 
     char tzbuf[] = "TZ=UTC";
     putenv(tzbuf);
-  //  julian_clock::test_delta_t_lerp();
+    tzset();
 
     std::chrono::system_clock::time_point t = std::chrono::system_clock::now();
     jd_clock::time_point jd = jd_clock::now();
@@ -169,10 +155,9 @@ int run()
         long double minmag = 3.0l;
         std::chrono::system_clock::time_point mintp = std::chrono::system_clock::now();
         for (int i = 0; i < 29*24*60; ++i) {
-            jd += fracdays(60.0/86400.0);
+            jd += jd_clock::duration(60.0l/jd_clock::SECONDS_PER_JDAY);
             t += std::chrono::seconds(60);
-            //const double jd_now = static_cast<double>(julian_clock::point_to_jde(jd));
-            const double jd_now = static_cast<double>(fracdays(jd.time_since_epoch()).count());
+            const double jd_now = static_cast<double>(jd_clock::duration(jd.time_since_epoch()).count());
             JPLEphems::State sm = _de431.get_state(jd_now, JPLEphems::Earth, JPLEphems::Moon);
             JPLEphems::State ss = _de431.get_state(jd_now, JPLEphems::Sun, JPLEphems::EarthMoonBarycenter);
             vec2q_t magphase = sm.ra_magphase(ss);
@@ -185,7 +170,7 @@ int run()
             if (mag < minmag && dmag < 0.0l) {
                 minmag = mag;
                 mintp = t;
-            } else if (mag > 1.0l && minmag < 0.01l && dmag > 0.0l) {
+            } else if (mag > 1.0l && minmag < 0.1l && dmag > 0.0l) {
                 break;
             }
         }
@@ -198,19 +183,15 @@ int run()
 }
 
 int test() {
-    //julian_clock::time_point tp = julian_clock::now();
+    jd_clock::test_delta_t_lerp();
     auto jd = jd_clock::now();
-    std::cout << jd_clock::now() << std::endl;
-    std::cout << (double)jd.time_since_epoch().count() << std::endl;
-    const double jd_now = static_cast<double>(fracdays(jd.time_since_epoch()).count());
-    std::cout << jd_now << std::endl;
+    std::cerr << jd << std::endl;
+    std::cerr << jd.time_since_epoch().count() << std::endl;
+    const double jd_now = static_cast<double>(jd_clock::duration(jd.time_since_epoch()).count());
+    std::cerr << jd_now << std::endl;
     return 0;
 }
 
 int main() {
-#if 1
-    return run();
-#else
-    return test();
-#endif
+    return test() || run();
 }
