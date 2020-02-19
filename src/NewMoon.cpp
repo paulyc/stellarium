@@ -194,9 +194,9 @@ int main()
     std::cout << "hello newmoon " << t << std::endl;
     timespec ts = {5,0}; //5.000000000s
     try {
-        _de430.init("/home/paulyc/Development/stellarium/ephem/linux_p1550p2650.430");
-        _de430t.init("/home/paulyc/Development/stellarium/ephem/linux_p1550p2650.430t");
-        _de431.init("/home/paulyc/Development/stellarium/ephem/lnxm13000p17000.431");
+        _de430.init("ephem/linux_p1550p2650.430");
+        _de430t.init("ephem/linux_p1550p2650.430t");
+        _de431.init("ephem/lnxm13000p17000.431");
     } catch (std::exception &ex) {
         std::cerr << "EXCEPTION: " <<  ex.what() << std::endl;
         return 1;
