@@ -1747,7 +1747,7 @@ void StelCore::addSiderealDays(double d)
 	setJD(getJD() + d);
 }
 
-// Get the sidereal time shifted by the observer longitude
+// Get the sidereal time of the prime meridian (i.e. Rotation Angle) shifted by the observer longitude
 double StelCore::getLocalSiderealTime() const
 {
 	// On Earth, this requires UT deliberately with all its faults, on other planets we use the more regular TT.
@@ -2456,14 +2456,14 @@ QString StelCore::getCurrentDeltaTAlgorithmValidRangeDescription(const double JD
 // TODO2: This could be moved to the SkyDrawer or even some GUI class, as it is used to decide a GUI thing.
 bool StelCore::isBrightDaylight() const
 {
-	if (propMgr->getStelPropertyValue("Oculars.enableOcular").toBool())
+	if (propMgr->getStelPropertyValue("Oculars.enableOcular", true).toBool())
 		return false;
 	SolarSystem* ssys = GETSTELMODULE(SolarSystem);
 	if (!ssys->getFlagPlanets())
 		return false;
 	if (!getSkyDrawer()->getFlagHasAtmosphere())
 		return false;
-	if (ssys->getEclipseFactor(this)<=0.01) // Total solar eclipse
+	if (ssys->getEclipseFactor(this).first<=0.01) // Total solar eclipse
 		return false;
 
 	// immediately decide upon sky background brightness...

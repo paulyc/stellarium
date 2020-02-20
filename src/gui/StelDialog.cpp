@@ -25,6 +25,7 @@
 #include "StelActionMgr.hpp"
 #include "StelPropertyMgr.hpp"
 #include "StelTranslator.hpp"
+#include "StelModuleMgr.hpp"
 
 #include <QDebug>
 #include <QAbstractButton>
@@ -299,10 +300,19 @@ void StelDialog::connectBoolProperty(QAbstractButton *checkBox, const QString &p
 	new QAbstractButtonStelPropertyConnectionHelper(prop,checkBox);
 }
 
-void StelDialog::connectColorButton(QToolButton *toolButton, QString propertyName, QString iniName)
+void StelDialog::connectBoolProperty(QGroupBox *checkBox, const QString &propName)
+{
+	StelProperty* prop = StelApp::getInstance().getStelPropertyManager()->getProperty(propName);
+	Q_ASSERT_X(prop,"StelDialog", "StelProperty does not exist");
+
+	new QGroupBoxStelPropertyConnectionHelper(prop,checkBox);
+}
+
+void StelDialog::connectColorButton(QToolButton *toolButton, QString propertyName, QString iniName, QString moduleName)
 {
 	toolButton->setProperty("propName", propertyName);
 	toolButton->setProperty("iniName", iniName);
+	toolButton->setProperty("moduleName", moduleName);
 	StelProperty* prop = StelApp::getInstance().getStelPropertyManager()->getProperty(propertyName);
 	Vec3f vColor = prop->getValue().value<Vec3f>();
 	QColor color=QColor::fromRgbF(vColor.v[0], vColor.v[1], vColor.v[2]);
@@ -330,7 +340,8 @@ void StelDialog::askColor()
 	}
 	QString propName=sender()->property("propName").toString();
 	QString iniName=sender()->property("iniName").toString();
-	if ((propName.length()==0) || (iniName.length()==0))
+	QString moduleName=sender()->property("moduleName").toString(); // optional
+	if ((propName.isEmpty()) || (iniName.isEmpty()))
 	{
 		qWarning() << "ColorButton not set up properly! Ignoring.";
 		Q_ASSERT(0);
@@ -343,7 +354,15 @@ void StelDialog::askColor()
 	{
 		vColor = Vec3f(c.redF(), c.greenF(), c.blueF());
 		StelApp::getInstance().getStelPropertyManager()->setStelPropertyValue(propName, QVariant::fromValue(vColor));
-		StelApp::getInstance().getSettings()->setValue(iniName, StelUtils::vec3fToStr(vColor));
+		if (moduleName.isEmpty())
+			StelApp::getInstance().getSettings()->setValue(iniName, StelUtils::vec3fToStr(vColor));
+		else
+		{
+			StelModule *module=StelApp::getInstance().getModuleMgr().getModule(moduleName);
+			QSettings *settings=module->getSettings();
+			Q_ASSERT(settings);
+			settings->setValue(iniName, StelUtils::vec3fToStr(vColor));
+		}
 		static_cast<QToolButton*>(QObject::sender())->setStyleSheet("QToolButton { background-color:" + c.name() + "; }");
 	}
 }
@@ -410,6 +429,27 @@ void QAbstractButtonStelPropertyConnectionHelper::onPropertyChanged(const QVaria
 	bool b = button->blockSignals(true);
 	button->setChecked(value.toBool());
 	button->blockSignals(b);
+}
+
+QGroupBoxStelPropertyConnectionHelper::QGroupBoxStelPropertyConnectionHelper(StelProperty *prop, QGroupBox *box)
+	:StelPropertyProxy(prop,box), box(box)
+{
+	QVariant val = prop->getValue();
+	bool ok = val.canConvert<bool>();
+	Q_ASSERT_X(ok,"QGroupBoxStelPropertyConnectionHelper","Can not convert to bool datatype");
+	Q_UNUSED(ok);
+	onPropertyChanged(val);
+
+	//in this direction, we can directly connect because Qt supports QVariant slots with the new syntax
+	connect(box, &QGroupBox::toggled, prop, &StelProperty::setValue);
+}
+
+void QGroupBoxStelPropertyConnectionHelper::onPropertyChanged(const QVariant &value)
+{
+	//block signals to prevent sending the valueChanged signal, changing the property again
+	bool b = box->blockSignals(true);
+	box->setChecked(value.toBool());
+	box->blockSignals(b);
 }
 
 QComboBoxStelPropertyConnectionHelper::QComboBoxStelPropertyConnectionHelper(StelProperty *prop, QComboBox *combo)

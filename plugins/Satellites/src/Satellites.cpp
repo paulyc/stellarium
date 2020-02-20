@@ -55,6 +55,7 @@
 #include <QVariant>
 #include <QDir>
 #include <QTemporaryFile>
+#include <QRegExp>
 
 StelModule* SatellitesStelPluginInterface::getStelModule() const
 {
@@ -81,8 +82,7 @@ Satellites::Satellites()
 	: satelliteListModel(Q_NULLPTR)
 	, toolbarButton(Q_NULLPTR)
 	, earth(Q_NULLPTR)
-	, defaultHintColor(0.0f, 0.4f, 0.6f)
-	, defaultOrbitColor(0.0f, 0.3f, 0.6f)
+	, defaultHintColor(0.0f, 0.4f, 0.6f)	
 	, updateState(CompleteNoUpdates)
 	, downloadMgr(Q_NULLPTR)
 	, progressBar(Q_NULLPTR)
@@ -208,6 +208,7 @@ void Satellites::init()
 	// Handle changes to the observer location or wide range of dates:
 	StelCore* core = StelApp::getInstance().getCore();
 	connect(core, SIGNAL(locationChanged(StelLocation)), this, SLOT(updateObserverLocation(StelLocation)));
+	connect(core, SIGNAL(configurationDataSaved()), this, SLOT(saveSettings()));
 	
 	// let sat symbols stay on-screen even if highly unprecise over time 
 	//connect(core, SIGNAL(dateChangedForMonth()), this, SLOT(updateSatellitesVisibility()));
@@ -697,7 +698,7 @@ void Satellites::loadSettings()
 	conf->endGroup();
 }
 
-void Satellites::saveSettings()
+void Satellites::saveSettingsToConfig()
 {
 	QSettings* conf = StelApp::getInstance().getSettings();
 	conf->beginGroup("Satellites");
@@ -826,6 +827,7 @@ void Satellites::setDataMap(const QVariantMap& map)
 	QVariantList defaultHintColorMap;
 	defaultHintColorMap << defaultHintColor[0] << defaultHintColor[1] << defaultHintColor[2];
 
+
 	if (map.contains("hintColor"))
 	{
 		defaultHintColorMap = map.value("hintColor").toList();
@@ -848,8 +850,12 @@ void Satellites::setDataMap(const QVariantMap& map)
 		if (!satData.contains("orbitColor"))
 			satData["orbitColor"] = satData["hintColor"];
 
-		if (!satData.contains("stdMag") && qsMagList.contains(satId))
-			satData["stdMag"] = qsMagList[satId];
+		if (!satData.contains("infoColor"))
+			satData["infoColor"] = satData["hintColor"];
+
+		int sid = satId.toInt();
+		if (!satData.contains("stdMag") && qsMagList.contains(sid))
+			satData["stdMag"] = qsMagList[sid];
 
 		SatelliteP sat(new Satellite(satId, satData));
 		if (sat->initialized)
@@ -868,7 +874,7 @@ void Satellites::setDataMap(const QVariantMap& map)
 QVariantMap Satellites::createDataMap(void)
 {
 	QVariantMap map;
-	QVariantList defHintCol;
+	QVariantList defHintCol, defOrbitCol, defInfoCol;
 	defHintCol << Satellite::roundToDp(defaultHintColor[0],3)
 		   << Satellite::roundToDp(defaultHintColor[1],3)
 		   << Satellite::roundToDp(defaultHintColor[2],3);
@@ -886,6 +892,9 @@ QVariantMap Satellites::createDataMap(void)
 
 		if (satMap["hintColor"].toList() == defHintCol)
 			satMap.remove("hintColor");
+
+		if (satMap["infoColor"].toList() == defHintCol)
+			satMap.remove("infoColor");
 
 		if (satMap["stdMag"].toFloat() == 99.f)
 			satMap.remove("stdMag");
@@ -995,12 +1004,13 @@ bool Satellites::add(const TleData& tleData)
 	satProperties.insert("name", tleData.name);
 	satProperties.insert("tle1", tleData.first);
 	satProperties.insert("tle2", tleData.second);
-	satProperties.insert("hintColor", hintColor);
+	satProperties.insert("hintColor", hintColor);	
 	//TODO: Decide if newly added satellites are visible by default --BM
 	satProperties.insert("visible", true);
 	satProperties.insert("orbitVisible", false);
-	if (qsMagList.contains(tleData.id))
-		satProperties.insert("stdMag", qsMagList[tleData.id]);
+	int sid = tleData.id.toInt();
+	if (qsMagList.contains(sid))
+		satProperties.insert("stdMag", qsMagList[sid]);
 	if (tleData.status != Satellite::StatusUnknown)
 		satProperties.insert("status", tleData.status);
 	
@@ -1267,7 +1277,7 @@ void Satellites::updateFromOnlineSources()
 	for (auto url : updateUrls)
 	{
 		TleSource source;
-		source.file = 0;
+		source.file = Q_NULLPTR;
 		source.addNew = false;
 		if (url.startsWith("1,"))
 		{
@@ -1347,7 +1357,7 @@ void Satellites::saveDownloadedUpdate(QNetworkReply* reply)
 				if (updateSources[i].url == url)
 				{
 					updateSources[i].file = tmpFile;
-					tmpFile = 0;
+					tmpFile = Q_NULLPTR;
 					break;
 				}
 			}
@@ -1392,7 +1402,7 @@ void Satellites::saveDownloadedUpdate(QNetworkReply* reply)
 			             updateSources[i].addNew);
 			updateSources[i].file->close();
 			delete updateSources[i].file;
-			updateSources[i].file = 0;
+			updateSources[i].file = Q_NULLPTR;
 		}
 	}
 	updateSources.clear();	
@@ -1515,8 +1525,9 @@ void Satellites::updateSatellites(TleDataHash& newTleSets)
 				sat->lastUpdated = lastUpdate;
 				updatedCount++;
 			}
-			if (qsMagList.contains(id))
-				sat->stdMag = qsMagList[id];
+			int sid = id.toInt();
+			if (qsMagList.contains(sid))
+				sat->stdMag = qsMagList[sid];
 		}
 		else
 		{
@@ -1653,14 +1664,16 @@ void Satellites::parseTleFile(QFile& openFile,
 				lastData.second = line;
 				// The Satellite Catalog Number is the second number
 				// on the second line.
-				QString id = line.split(' ').at(1).trimmed();
-				if (id.isEmpty())
+				QString id = getSatIdFromLine2(line);
+				if (id.isEmpty()) {
+					qDebug() << "[Satellites] failed to extract SatId from \"" << line << "\"";
 					continue;
+				}
 				lastData.id = id;
 				
 				// This is the second line and there will be no more,
 				// so if everything is OK, save the elements.
-				if (!lastData.name.isEmpty() &&	!lastData.first.isEmpty())
+				if (!lastData.name.isEmpty() && !lastData.first.isEmpty())
 				{
 					// Some satellites can be listed in multiple files,
 					// and only some of those files may be marked for adding,
@@ -1677,6 +1690,17 @@ void Satellites::parseTleFile(QFile& openFile,
 				qDebug() << "[Satellites] unprocessed line " << lineNumber <<  " in file " << QDir::toNativeSeparators(openFile.fileName());
 		}
 	}
+}
+
+QString Satellites::getSatIdFromLine2(const QString& line)
+{
+	QString id = line.split(' ',  QString::SkipEmptyParts).at(1).trimmed();
+	if (!id.isEmpty())
+	{
+		// Strip any leading zeros as they should be unique ints as strings.
+		id.remove(QRegExp("^[0]*"));
+	}
+	return id;
 }
 
 void Satellites::parseQSMagFile(QString qsMagFile)
@@ -1698,7 +1722,7 @@ void Satellites::parseQSMagFile(QString qsMagFile)
 	while (!qsmFile.atEnd())
 	{
 		QString line = QString(qsmFile.readLine());
-		QString id   = line.mid(0,5).trimmed();
+		int id   = line.mid(0,5).trimmed().toInt();
 		QString smag = line.mid(33,4).trimmed();
 		if (!smag.isEmpty())
 			qsMagList.insert(id, smag.toDouble());

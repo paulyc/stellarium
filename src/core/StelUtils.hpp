@@ -84,6 +84,15 @@ namespace StelUtils
 	//! Return the user agent name, i.e. "Stellarium/0.15.0 (Linux)"
 	QString getUserAgentString();
 
+	inline const QString getEndLineChar() {
+		#ifdef Q_OS_WIN
+		const QString stelEndl="\r\n";
+		#else
+		const QString stelEndl="\n";
+		#endif
+		return stelEndl;
+	}
+
 	//! Convert hours, minutes, seconds to decimal hours
 	inline double hmsToHours(const unsigned int h, const unsigned int m, const double s){
 		return static_cast<double>(h)+static_cast<double>(m)/60.+s/3600.;
@@ -154,7 +163,7 @@ namespace StelUtils
 
 	//! Convert an angle in radian to a dms formatted string.
 	//! @param angle input angle in radian	
-	//! @param decimal output decimal second value
+	//! @param decimal output second value with decimal fraction
 	//! @param useD Define if letter "d" must be used instead of deg sign
 	QString radToDmsStr(const double angle, const bool decimal=false, const bool useD=false);
 
@@ -396,8 +405,8 @@ namespace StelUtils
 	//! Return a day number of week for date
 	//! @return number of day: 0 - sunday, 1 - monday,..
 	int getDayOfWeek(int year, int month, int day);
-	inline int getDayOfWeek(double JD){
-		return static_cast<int>(floor(fmod(JD+1.5, 7)));
+	inline int getDayOfWeek(double JD){ double d= fmod(JD+1.5, 7); if (d<0) d+=7.0;
+		return static_cast<int>(floor(d));
 	}
 
 	//! Get the current Julian Date from system time.
@@ -473,25 +482,12 @@ namespace StelUtils
 				1.f / (1.f -x*(1.f -x/2.f*(1.f- x/3.f*(1.f-x/4.f*(1.f-x/5.f)))));
 	}
 
-	//! Get a night mode version of a color.  That is find the brightness of a color and set that in the
-	//! red channel only
-	/* FIXME: abandoned code?
-	inline Vec3f getNightColor(const Vec3f& dayColor)
-	{
-		float max = 0.0;
-		for(int i=0; i<3; i++)
-		{
-			max = dayColor[i] > max ? dayColor[i] : max;
-		}
-		return Vec3f(max, 0, 0);
-	}
-	*/
-
-	//! Calculate and return sidereal period in days from semi-major axis (in AU)
-	double calculateSiderealPeriod(const double SemiMajorAxis);
+	// Calculate and return sidereal period in days from semi-major axis (in AU)
+	//double calculateSiderealPeriod(const double SemiMajorAxis);  MOVED TO Orbit.h
 
 	//! Convert decimal hours to hours, minutes, seconds
 	QString hoursToHmsStr(const double hours, const bool lowprecision = false);
+	QString hoursToHmsStr(const float hours, const bool lowprecision = false);
 
 	//! Convert a hms formatted string to decimal hours
 	double hmsStrToHours(const QString& s);
@@ -801,7 +797,7 @@ namespace StelUtils
 		return (T(0) < val) - (val < T(0));
 	}
 	
-	//! Compute cosines and sines around a circle which is split in "segments" parts.
+	//! Compute cosines and sines around a circle which is split in "slices" parts.
 	//! Values are stored in the global static array cos_sin_theta.
 	//! Used for the sin/cos values along a latitude circle, equator, etc. for a spherical mesh.
 	//! @param slices number of partitions (elsewhere called "segments") for the circle
@@ -897,6 +893,12 @@ namespace StelUtils
 		T K=J-H;
 
 		return (((K*(1.0/24.0)*n + (H+J)/12.0)*n  + (F*0.5-K/24.0))*n + ((B+C)*0.5 - (H+J)/12.0))*n +y3;
+	}
+
+	//! Interval test. This checks whether @param value is within [@param low, @param high]
+	template <typename T> bool isWithin(const T& value, const T& low, const T& high)
+	{
+	    return !(value < low) && !(high < value);
 	}
 
 

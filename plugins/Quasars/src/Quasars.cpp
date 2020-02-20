@@ -169,7 +169,7 @@ void Quasars::init()
 
 		// key bindings and other actions
 		addAction("actionShow_Quasars", N_("Quasars"), N_("Show quasars"), "quasarsVisible", "Ctrl+Alt+Q");
-		addAction("actionShow_Quasars_ConfigDialog", N_("Quasars"), N_("Quasars configuration window"), configDialog, "visible");
+		addAction("actionShow_Quasars_ConfigDialog", N_("Quasars"), N_("Quasars configuration window"), configDialog, "visible", ""); // Allow assign shortkey
 
 		GlowIcon = new QPixmap(":/graphicGui/glow32x32.png");
 		OnIcon = new QPixmap(":/Quasars/btQuasars-on.png");
@@ -212,6 +212,7 @@ void Quasars::init()
 	updateTimer->start();
 
 	connect(this, SIGNAL(jsonUpdateComplete(void)), this, SLOT(reloadCatalog()));
+	connect(StelApp::getInstance().getCore(), SIGNAL(configurationDataSaved()), this, SLOT(saveSettings()));
 
 	GETSTELMODULE(StelObjectMgr)->registerStelObjectMgr(this);
 }

@@ -47,7 +47,7 @@ bool Comet::createTailIndices=true;
 bool Comet::createTailTextureCoords=true;
 StelTextureSP Comet::comaTexture;
 StelTextureSP Comet::tailTexture;
-QVector<float> Comet::tailTexCoordArr; // computed only once for all Comets.
+QVector<Vec2f> Comet::tailTexCoordArr; // computed only once for all Comets.
 QVector<unsigned short> Comet::tailIndices; // computed only once for all Comets.
 
 Comet::Comet(const QString& englishName,
@@ -61,7 +61,7 @@ Comet::Comet(const QString& englishName,
 	     const QString& atexMapName,
 	     const QString& aobjModelName,
 	     posFuncType coordFunc,
-	     void* orbitPtr,
+	     KeplerOrbit* orbitPtr,
 	     OsculatingFunctType *osculatingFunc,
 	     bool acloseOrbit,
 	     bool hidden,
@@ -86,8 +86,7 @@ Comet::Comet(const QString& englishName,
 		  false, //No atmosphere
 		  true, //halo
 		  pTypeStr),
-	  slopeParameter(-1.f), //== uninitialized: used in getVMagnitude()
-	  semiMajorAxis(0.),
+	  slopeParameter(-10.f), // -10 == uninitialized: used in getVMagnitude()
 	  isCometFragment(false),
 	  nameIsProvisionalDesignation(false),
 	  tailFactors(-1., -1.), // mark "invalid"
@@ -104,6 +103,7 @@ Comet::Comet(const QString& englishName,
 {
 	this->outgas_intensity =outgas_intensity;
 	this->outgas_falloff   =outgas_falloff;
+
 	gastailVertexArr.clear();
 	dusttailVertexArr.clear();
 	comaVertexArr.clear();
@@ -119,9 +119,10 @@ Comet::~Comet()
 
 void Comet::setAbsoluteMagnitudeAndSlope(const float magnitude, const float slope)
 {
-	if (slope < 0 || slope > 20.0f)
+	if (slope <= -1.f || slope > 20.0f)
 	{
-		qDebug() << "Comet::setAbsoluteMagnitudeAndSlope(): Invalid slope parameter value (must be between 0 and 20)";
+		// Slope G can become slightly smaller than 0. -10 is mark of invalidity.
+		qDebug() << "Comet::setAbsoluteMagnitudeAndSlope(): Invalid slope parameter value (must be between -1 and 20)";
 		return;
 	}
 
@@ -161,9 +162,9 @@ QString Comet::getInfoString(const StelCore *core, const InfoStringGroup &flags)
 	if (flags&ObjectType && getPlanetType()!=isUNDEFINED)
 	{
 		QString cometType = qc_("non-periodic", "type of comet");
-		if (semiMajorAxis>0.0)
+		if (static_cast<KeplerOrbit*>(orbitPtr)->getEccentricity() != 1.0)
 		{
-			// Parabolic and hyperbolic comets doesn't have semi-major axis of the orbit. We have comet with elliptic orbit.
+			// Parabolic and hyperbolic comets don't have semi-major axis of the orbit. We have comet with elliptic orbit.
 			cometType = qc_("periodic", "type of comet");
 		}
 		oss << QString("%1: <b>%2</b> (%3)").arg(q_("Type"), q_(getPlanetTypeString()), cometType) << "<br />";
@@ -174,9 +175,10 @@ QString Comet::getInfoString(const StelCore *core, const InfoStringGroup &flags)
 	if (flags&AbsoluteMagnitude)
 	{
 		//TODO: Make sure absolute magnitude is a sane value
-		//If the two parameter magnitude system is not use, don't display this
+		//If the two parameter magnitude system is not used, don't display this
 		//value. (Using radius/albedo doesn't make any sense for comets.)
-		if (slopeParameter >= 0)
+		// Note that slope parameter can be <0 (down to -2?), so -10 is now used for "uninitialized"
+		if (slopeParameter >= -9.9f)
 			oss << QString("%1: %2").arg(q_("Absolute Magnitude")).arg(absoluteMagnitude, 0, 'f', 2) << "<br>";
 	}
 
@@ -190,8 +192,8 @@ QString Comet::getInfoString(const StelCore *core, const InfoStringGroup &flags)
 	QString distAU, distKM;
 	if (flags&Distance)
 	{
-		double hdistanceAu = getHeliocentricEclipticPos().length();
-		double hdistanceKm = AU * hdistanceAu;
+		const double hdistanceAu = getHeliocentricEclipticPos().length();
+		const double hdistanceKm = AU * hdistanceAu;
 		// TRANSLATORS: Unit of measure for distance - astronomical unit
 		QString au = qc_("AU", "distance, astronomical unit");
 		bool useKM = true;
@@ -208,8 +210,8 @@ QString Comet::getInfoString(const StelCore *core, const InfoStringGroup &flags)
 		}
 		oss << QString("%1: %2 %3 (%4 %5)").arg(q_("Distance from Sun"), distAU, au, distKM, useKM ? km : Mkm) << "<br />";
 
-		double distanceAu = getJ2000EquatorialPos(core).length();
-		double distanceKm = AU * distanceAu;
+		const double distanceAu = getJ2000EquatorialPos(core).length();
+		const double distanceKm = AU * distanceAu;
 		if (distanceAu < 0.1)
 		{
 			distAU = QString::number(distanceAu, 'f', 6);
@@ -230,25 +232,46 @@ QString Comet::getInfoString(const StelCore *core, const InfoStringGroup &flags)
 		// TRANSLATORS: Unit of measure for speed - kilometers per second
 		QString kms = qc_("km/s", "speed");
 
-		Vec3d orbitalVel=getEclipticVelocity();
-		double orbVel=orbitalVel.length();
+		const Vec3d orbitalVel=getEclipticVelocity();
+		const double orbVel=orbitalVel.length();
 		if (orbVel>0.)
 		{ // AU/d * km/AU /24
 			oss << QString("%1: %2 %3").arg(q_("Orbital velocity")).arg(orbVel* AU/86400., 0, 'f', 3).arg(kms) << "<br />";
 		}
 	}
 
+	if (flags&ProperMotion)
+	{
+		Vec3d equPos=getEquinoxEquatorialPos(core);
+		double dec_equ, ra_equ;
+		StelUtils::rectToSphe(&ra_equ,&dec_equ,equPos);
+		StelCore* core1 = StelApp::getInstance().getCore(); // we need non-const reference here.
+		const double currentJD=core1->getJD();
+		core1->setJD(currentJD-StelCore::JD_HOUR);
+		core1->update(0);
+		Vec3d equPosPrev=getEquinoxEquatorialPos(core1);
+		double dec_equPrev, ra_equPrev;
+		StelUtils::rectToSphe(&ra_equPrev,&dec_equPrev,equPosPrev);
+		core1->setJD(currentJD);
+		core1->update(0);
+		const double deltaEq=equPos.angle(equPosPrev);
+		double pa=atan2(ra_equ-ra_equPrev, dec_equ-dec_equPrev); // position angle: From North counterclockwise!
+		if (pa<0) pa += 2.*M_PI;
+		oss << QString("%1: %2 %3 %4%5").arg(q_("Hourly motion"), StelUtils::radToDmsStr(deltaEq), qc_("towards", "into the direction of"), QString::number(pa*M_180_PI, 'f', 1), QChar(0x00B0)) << "<br/>";
+		oss << QString("%1: d&alpha;=%2 d&delta;=%3").arg(q_("Hourly motion"), StelUtils::radToDmsStr(ra_equ-ra_equPrev), StelUtils::radToDmsStr(dec_equ-dec_equPrev)) << "<br/>";
+	}
+
 	if (flags&Extra)
 	{
 		// If semi-major axis not zero then calculate and display orbital period for comet in days
-		double siderealPeriod = getSiderealPeriod();
+		const double siderealPeriod = getSiderealPeriod();
 		if (siderealPeriod>0.0)
 		{
 			// Sidereal (orbital) period for comets in Julian years (symbol: a)
 			oss << QString("%1: %2 a").arg(q_("Sidereal period"), QString::number(siderealPeriod/365.25, 'f', 3)) << "<br />";
 		}
 
-		double siderealPeriodCurrentPlanet = core->getCurrentPlanet()->getSiderealPeriod();
+		const double siderealPeriodCurrentPlanet = core->getCurrentPlanet()->getSiderealPeriod();
 		if (siderealPeriodCurrentPlanet > 0.0 && siderealPeriod > 0.0 && core->getCurrentPlanet()->getPlanetType()==Planet::isPlanet && getPlanetType()!=Planet::isArtificial && getPlanetType()!=Planet::isStar && getPlanetType()!=Planet::isMoon)
 		{
 			double sp = qAbs(1/(1/siderealPeriodCurrentPlanet - 1/siderealPeriod));
@@ -323,27 +346,18 @@ QVariantMap Comet::getInfoMap(const StelCore *core) const
 
 	return map;
 }
-void Comet::setSemiMajorAxis(const double value)
-{
-	semiMajorAxis = value;
-}
 
 double Comet::getSiderealPeriod() const
 {
-	double period;
-	if (semiMajorAxis>0)
-		period = StelUtils::calculateSiderealPeriod(semiMajorAxis);
-	else
-		period = 0;
-
-	return period;
+	const double semiMajorAxis=static_cast<KeplerOrbit*>(orbitPtr)->getSemimajorAxis();
+	return ((semiMajorAxis>0) ? KeplerOrbit::calculateSiderealPeriod(semiMajorAxis, 1.0) : 0.);
 }
 
 float Comet::getVMagnitude(const StelCore* core) const
 {
 	//If the two parameter system is not used,
 	//use the default radius/albedo mechanism
-	if (slopeParameter < 0)
+	if (slopeParameter < -9.0f)
 	{
 		return Planet::getVMagnitude(core);
 	}
@@ -375,11 +389,7 @@ void Comet::update(int deltaTime)
 	StelCore* core=StelApp::getInstance().getCore();
 	double dateJDE=core->getJDE();
 
-	// The CometOrbit is in fact available in userDataPtr!
-	CometOrbit* orbit=static_cast<CometOrbit*>(orbitPtr);
-	Q_ASSERT(orbit);
-	if (!orbit->objectDateValid(dateJDE)) return; // don't do anything if out of useful date range. This allows having hundreds of comet elements.
-
+	if (!static_cast<KeplerOrbit*>(orbitPtr)->objectDateValid(dateJDE)) return; // don't do anything if out of useful date range. This allows having hundreds of comet elements.
 
 	//GZ: I think we can make deltaJDtail adaptive, depending on distance to sun! For some reason though, this leads to a crash!
 	//deltaJDtail=StelCore::JD_SECOND * qBound(1.0, eclipticPos.length(), 20.0);
@@ -388,7 +398,7 @@ void Comet::update(int deltaTime)
 	{
 		lastJDEtail=dateJDE;
 
-		if (orbit->getUpdateTails()){
+		if (static_cast<KeplerOrbit*>(orbitPtr)->getUpdateTails()){
 			// Compute lengths and orientations from orbit object, but only if required.
 			tailFactors=getComaDiameterAndTailLengthAU();
 
@@ -408,7 +418,7 @@ void Comet::update(int deltaTime)
 				computeParabola(gasparameter, gasTailEndRadius, -0.5f*gasparameter, gastailVertexArr,  tailTexCoordArr, tailIndices);
 				//gastailColorArr.fill(Vec3f(0.3,0.3,0.3), gastailVertexArr.length());
 				// Now we make a skewed parabola. Skew factor (xOffset, last arg) is rather ad-hoc/empirical. TBD later: Find physically correct solution.
-				computeParabola(dustparameter, dustTailWidthFactor*gasTailEndRadius, -0.5f*dustparameter, dusttailVertexArr, tailTexCoordArr, tailIndices, 25.0f*static_cast<float>(orbit->getVelocity().length()));
+				computeParabola(dustparameter, dustTailWidthFactor*gasTailEndRadius, -0.5f*dustparameter, dusttailVertexArr, tailTexCoordArr, tailIndices, 25.0f*static_cast<float>(static_cast<KeplerOrbit*>(orbitPtr)->getVelocity().length()));
 				//dusttailColorArr.fill(Vec3f(0.3,0.3,0.3), dusttailVertexArr.length());
 
 
@@ -417,7 +427,7 @@ void Comet::update(int deltaTime)
 				Vec3d eclposNrm=eclipticPos; eclposNrm.normalize();
 				gasTailRot=Mat4d::rotation(Vec3d(0.0, 0.0, 1.0)^(eclposNrm), std::acos(Vec3d(0.0, 0.0, 1.0).dot(eclposNrm)) );
 
-				Vec3d velocity=orbit->getVelocity(); // [AU/d]
+				Vec3d velocity=static_cast<KeplerOrbit*>(orbitPtr)->getVelocity(); // [AU/d]
 				// This was a try to rotate a straight parabola somewhat away from the antisolar direction.
 				//Mat4d dustTailRot=Mat4d::rotation(eclposNrm^(-velocity), 0.15f*std::acos(eclposNrm.dot(-velocity))); // GZ: This scale factor of 0.15 is empirical from photos of Halley and Hale-Bopp.
 				// The curved tail is curved towards positive X. We first rotate around the Z axis into a direction opposite of the motion vector, then again the antisolar rotation applies.
@@ -433,7 +443,7 @@ void Comet::update(int deltaTime)
 					dustVertices[i].transfo4d(dustTailRot);
 				}
 			}
-			orbit->setUpdateTails(false); // don't update until position has been recalculated elsewhere
+			static_cast<KeplerOrbit*>(orbitPtr)->setUpdateTails(false); // don't update until position has been recalculated elsewhere
 		}
 	}
 
@@ -441,7 +451,7 @@ void Comet::update(int deltaTime)
 	const bool withAtmosphere=(core->getSkyDrawer()->getFlagHasAtmosphere());
 
 	StelToneReproducer* eye = core->getToneReproducer();
-	float lum = core->getSkyDrawer()->surfaceBrightnessToLuminance(getVMagnitude(core)+13.0f); // How to calibrate?
+	const float lum = core->getSkyDrawer()->surfaceBrightnessToLuminance(getVMagnitude(core)+13.0f); // How to calibrate?
 	// Get the luminance scaled between 0 and 1
 	float aLum =eye->adaptLuminanceScaled(lum);
 
@@ -537,10 +547,7 @@ void Comet::draw(StelCore* core, float maxMagLabels, const QFont& planetNameFont
 	{
 		return;
 	}
-	// The CometOrbit is in fact available in userDataPtr!
-	CometOrbit* orbit=static_cast<CometOrbit*>(orbitPtr);
-	Q_ASSERT(orbit);
-	if (!orbit->objectDateValid(core->getJDE())) return; // don't draw at all if out of useful date range. This allows having hundreds of comet elements.
+	if (!static_cast<KeplerOrbit*>(orbitPtr)->objectDateValid(core->getJDE())) return; // don't draw at all if out of useful date range. This allows having hundreds of comet elements.
 
 	Mat4d mat = Mat4d::translation(eclipticPos) * rotLocalToParent;
 	// This removed totally the Planet shaking bug!!!
@@ -549,10 +556,10 @@ void Comet::draw(StelCore* core, float maxMagLabels, const QFont& planetNameFont
 
 	// Compute the 2D position and check if in the screen
 	const StelProjectorP prj = core->getProjection(transfo);
-	const float screenSz = static_cast<float>(getAngularSize(core))*M_PI_180f*prj->getPixelPerRadAtCenter();
-	const float viewport_left = prj->getViewportPosX();
-	const float viewport_bottom = prj->getViewportPosY();
-	if (prj->project(Vec3f(0.), screenPos)
+	const double screenSz = (getAngularSize(core))*M_PI_180*static_cast<double>(prj->getPixelPerRadAtCenter());
+	const double viewport_left = prj->getViewportPosX();
+	const double viewport_bottom = prj->getViewportPosY();
+	if (prj->project(Vec3d(0.), screenPos)
 		&& screenPos[1] > viewport_bottom - screenSz
 		&& screenPos[1] < viewport_bottom + prj->getViewportHeight()+screenSz
 		&& screenPos[0] > viewport_left - screenSz
@@ -566,17 +573,10 @@ void Comet::draw(StelCore* core, float maxMagLabels, const QFont& planetNameFont
 		// by putting here, only draw orbit if Comet is visible for clarity
 		drawOrbit(core);  // TODO - fade in here also...
 
-		if (flagLabels && ang_dist>0.25f && maxMagLabels>getVMagnitude(core))
-		{
-			labelsFader=true;
-		}
-		else
-		{
-			labelsFader=false;
-		}
+		labelsFader = (flagLabels && ang_dist>0.25f && maxMagLabels>getVMagnitude(core));
 		drawHints(core, planetNameFont);
 
-		draw3dModel(core,transfo,screenSz);
+		draw3dModel(core,transfo,static_cast<float>(screenSz));
 	}
 
 	// If comet is too faint to be seen, don't bother rendering. (Massive speedup if people have hundreds of comets!)
@@ -601,17 +601,18 @@ void Comet::drawTail(StelCore* core, StelProjector::ModelViewTranformP transfo, 
 {	
 	StelPainter sPainter(core->getProjection(transfo));
 	sPainter.setBlending(true, GL_ONE, GL_ONE);
-	sPainter.setCullFace(false);
 
 	tailTexture->bind();
 
 	if (gas) {
-		sPainter.setArrays(static_cast<const Vec3d*>(gastailVertexArr.constData()), reinterpret_cast<const Vec2f*>(tailTexCoordArr.constData()), static_cast<const Vec3f*>(gastailColorArr.constData()));
-		sPainter.drawFromArray(StelPainter::Triangles, tailIndices.size(), 0, true, tailIndices.constData());
+		StelVertexArray vaGas(static_cast<const QVector<Vec3d> >(gastailVertexArr), StelVertexArray::Triangles,
+				      static_cast<const QVector<Vec2f> >(tailTexCoordArr), tailIndices, static_cast<const QVector<Vec3f> >(gastailColorArr));
+		sPainter.drawStelVertexArray(vaGas, true);
 
 	} else {
-		sPainter.setArrays(static_cast<const Vec3d*>(dusttailVertexArr.constData()), reinterpret_cast<const Vec2f*>(tailTexCoordArr.constData()), static_cast<const Vec3f*>(dusttailColorArr.constData()));
-		sPainter.drawFromArray(StelPainter::Triangles, tailIndices.size(), 0, true, tailIndices.constData());
+		StelVertexArray vaDust(static_cast<const QVector<Vec3d> >(dusttailVertexArr), StelVertexArray::Triangles,
+				      static_cast<const QVector<Vec2f> >(tailTexCoordArr), tailIndices, static_cast<const QVector<Vec3f> >(dusttailColorArr));
+		sPainter.drawStelVertexArray(vaDust, true);
 	}
 	sPainter.setBlending(false);
 }
@@ -626,18 +627,16 @@ void Comet::drawComa(StelCore* core, StelProjector::ModelViewTranformP transfo)
 	StelPainter sPainter(core->getProjection(transfo2));
 
 	sPainter.setBlending(true, GL_ONE, GL_ONE);
-	sPainter.setCullFace(false);
 
 	StelToneReproducer* eye = core->getToneReproducer();
 	float lum = core->getSkyDrawer()->surfaceBrightnessToLuminance(getVMagnitudeWithExtinction(core)+11.0f); // How to calibrate?
 	// Get the luminance scaled between 0 and 1
-	float aLum =eye->adaptLuminanceScaled(lum);
-	float magFactor=qBound(0.25f*intensityFovScale, aLum*intensityFovScale, 2.0f);
+	const float aLum =eye->adaptLuminanceScaled(lum);
+	const float magFactor=qBound(0.25f*intensityFovScale, aLum*intensityFovScale, 2.0f);
 	comaTexture->bind();
 	sPainter.setColor(0.3f*magFactor,0.7f*magFactor,magFactor);
-	sPainter.setArrays(reinterpret_cast<const Vec3d*>(comaVertexArr.constData()), reinterpret_cast<const Vec2f*>(comaTexCoordArr.constData()));
-	sPainter.drawFromArray(StelPainter::Triangles, comaVertexArr.size()/3);
-
+	StelVertexArray vaComa(static_cast<const QVector<Vec3d> >(comaVertexArr), StelVertexArray::Triangles, static_cast<const QVector<Vec2f> >(comaTexCoordArr));
+	sPainter.drawStelVertexArray(vaComa, true);
 	sPainter.setBlending(false);
 }
 
@@ -664,7 +663,7 @@ void Comet::computeComa(const float diameter)
 // Parabola equation: z=x²/2p.
 // xOffset for the dust tail, this may introduce a bend. Units are x per sqrt(z).
 void Comet::computeParabola(const float parameter, const float radius, const float zshift,
-						  QVector<Vec3d>& vertexArr, QVector<float>& texCoordArr,
+						  QVector<Vec3d>& vertexArr, QVector<Vec2f>& texCoordArr,
 						  QVector<unsigned short> &indices, const float xOffset)
 {
 	// keep the array and replace contents. However, using replace() is only slightly faster.
@@ -686,7 +685,7 @@ void Comet::computeParabola(const float parameter, const float radius, const flo
 	
 	vertexArr.replace(0, Vec3d(0.0, 0.0, static_cast<double>(zshift)));
 	int vertexArrIndex=1;
-	if (createTailTextureCoords) texCoordArr << 0.5f << 0.5f;
+	if (createTailTextureCoords) texCoordArr << Vec2f(0.5f, 0.5f);
 	// define the indices lying on circles, starting at 1: odd rings have 1/slices+1/2slices, even-numbered rings straight 1/slices
 	// inner ring#1
 	for (unsigned short int ring=1; ring<=COMET_TAIL_STACKS; ++ring){
@@ -696,7 +695,7 @@ void Comet::computeParabola(const float parameter, const float radius, const flo
 			x=xa[i]*radius*ring/COMET_TAIL_STACKS;
 			y=ya[i]*radius*ring/COMET_TAIL_STACKS;
 			vertexArr.replace(vertexArrIndex++, Vec3d(static_cast<double>(x+xShift), static_cast<double>(y), static_cast<double>(z)));
-			if (createTailTextureCoords) texCoordArr << 0.5f+ 0.5f*x/radius << 0.5f+0.5f*y/radius;
+			if (createTailTextureCoords) texCoordArr << Vec2f(0.5f+ 0.5f*x/radius, 0.5f+0.5f*y/radius);
 		}
 	}
 	// now link the faces with indices.

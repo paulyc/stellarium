@@ -99,33 +99,22 @@ void ConstellationMgr::init()
 	setFlagIsolateSelected(conf->value("viewing/flag_constellation_isolate_selected", false).toBool());
 	setFlagConstellationPick(conf->value("viewing/flag_constellation_pick", false).toBool());
 	setConstellationLineThickness(conf->value("viewing/constellation_line_thickness", 1).toInt());
-	setConstellationLineThickness(conf->value("viewing/constellation_boundaries_thickness", 1).toInt());
+	setConstellationBoundariesThickness(conf->value("viewing/constellation_boundaries_thickness", 1).toInt());
 	// The setting for developers
 	setFlagCheckLoadingData(conf->value("devel/check_loading_constellation_data","false").toBool());
 
 	QString starloreDisplayStyle=conf->value("viewing/constellation_name_style", "translated").toString();
-	if (starloreDisplayStyle=="translated")
-	{
-		setConstellationDisplayStyle(constellationsTranslated);
-	}
-	else if (starloreDisplayStyle=="native")
-	{
-		setConstellationDisplayStyle(constellationsNative);
-	}
-	else if (starloreDisplayStyle=="abbreviated")
-	{
-		setConstellationDisplayStyle(constellationsAbbreviated);
-	}
-	else if (starloreDisplayStyle=="english")
-	{
-		setConstellationDisplayStyle(constellationsEnglish);
-	}
-	else
+	static const QMap<QString, ConstellationDisplayStyle>map={
+		{ "translated",  constellationsTranslated},
+		{ "native",      constellationsNative},
+		{ "abbreviated", constellationsAbbreviated},
+		{ "english",     constellationsEnglish}};
+	if (!map.contains(starloreDisplayStyle))
 	{
 		qDebug() << "Warning: viewing/constellation_name_style (" << starloreDisplayStyle << ") invalid. Using translated style.";
 		conf->setValue("viewing/constellation_name_style", "translated");
-		setConstellationDisplayStyle(constellationsTranslated);
 	}
+	setConstellationDisplayStyle(map.value(starloreDisplayStyle, constellationsTranslated));
 
 	// Load colors from config file
 	QString defaultColor = conf->value("color/default_color").toString();
@@ -454,7 +443,7 @@ void ConstellationMgr::loadLinesAndArt(const QString &fileName, const QString &a
 
 	int totalRecords=0;
 	QString record;
-	QRegExp commentRx("^(\\s*#.*|\\s*)$");
+	QRegExp commentRx("^(\\s*#.*|\\s*)$"); // pure comment lines or empty lines
 	while (!in.atEnd())
 	{
 		record = QString::fromUtf8(in.readLine());

@@ -911,28 +911,26 @@ void StelMainScriptAPI::addToSelectedObjectInfoString(const QString &str, bool r
 	}
 
 	StelObjectP obj = omgr->getSelectedObject()[0];
-	if (replace)
-		obj->setExtraInfoString(str);
-	else
-		obj->addToExtraInfoString(str);
+	if (obj)
+	{
+		if (replace)
+			obj->setExtraInfoString(StelObject::Script, str);
+		else
+			obj->addToExtraInfoString(StelObject::Script, str);
+	}
 }
 
 
 
 void StelMainScriptAPI::clear(const QString& state)
 {
-	int stateInt = 0;
-	if (state.toLower() == "natural")
-		stateInt = 1;
-	else if (state.toLower() == "starchart")
-		stateInt = 2;
-	else if (state.toLower() == "deepspace")
-		stateInt = 3;
-	else if (state.toLower() == "galactic")
-		stateInt = 4;
-	else if (state.toLower() == "supergalactic")
-		stateInt = 5;
-
+	static const QMap<QString, int>stateMap={
+		{ "natural",   1},
+		{ "starchart", 2},
+		{ "deepspace", 3},
+		{ "galactic",  4},
+		{ "supergalactic", 5 }};
+	const int stateInt = stateMap.value(state.toLower(), 0);
 	if (stateInt == 0)
 	{
 		qWarning() << "WARNING clear(" << state << ") - state not known";
@@ -952,7 +950,7 @@ void StelMainScriptAPI::clear(const QString& state)
 		ZodiacalLight* zl = GETSTELMODULE(ZodiacalLight);
 		StelPropertyMgr* propMgr = StelApp::getInstance().getStelPropertyManager();
 
-		// Hide artificial satellites through StelProperties to avoid crash if plugin was did't loaded
+		// Hide artificial satellites through StelProperties to avoid crash if plugin was not loaded
 		propMgr->setStelPropertyValue("Satellites.hintsVisible",   false);
 		propMgr->setStelPropertyValue("Satellites.labelsVisible",  false);
 		propMgr->setStelPropertyValue("Satellites.flagOrbitLines", false);
@@ -1236,48 +1234,6 @@ void StelMainScriptAPI::goHome()
 	emit(requestSetHomePosition());
 }
 
-void StelMainScriptAPI::setMilkyWayVisible(bool b)
-{
-	// TODO: This method should be removed in version 0.20
-	qWarning() << "WARNING: core.setMilkyWayVisible() is deprecated and will soon be removed. Use MilkyWay.setFlagShow() instead.";
-	GETSTELMODULE(MilkyWay)->setFlagShow(b);
-}
-
-void StelMainScriptAPI::setMilkyWayIntensity(double i)
-{
-	// TODO: This method should be removed in version 0.20
-	qWarning() << "WARNING: core.setMilkyWayIntensity() is deprecated and will soon be removed. Use MilkyWay.setIntensity() instead.";
-	GETSTELMODULE(MilkyWay)->setIntensity(i);
-}
-
-double StelMainScriptAPI::getMilkyWayIntensity()
-{
-	// TODO: This method should be removed in version 0.20
-	qWarning() << "WARNING: core.getMilkyWayIntensity() is deprecated and will soon be removed. Use MilkyWay.getIntensity() instead.";
-	return GETSTELMODULE(MilkyWay)->getIntensity();
-}
-
-void StelMainScriptAPI::setZodiacalLightVisible(bool b)
-{
-	// TODO: This method should be removed in version 0.20
-	qWarning() << "WARNING: core.setZodiacalLightVisible() is deprecated and will soon be removed. Use ZodiacalLight.setFlagShow() instead.";
-	GETSTELMODULE(ZodiacalLight)->setFlagShow(b);
-}
-
-void StelMainScriptAPI::setZodiacalLightIntensity(double i)
-{
-	// TODO: This method should be removed in version 0.20
-	qWarning() << "WARNING: core.setZodiacalLightIntensity() is deprecated and will soon be removed. Use ZodiacalLight.setIntensity() instead.";
-	GETSTELMODULE(ZodiacalLight)->setIntensity(i);
-}
-
-double StelMainScriptAPI::getZodiacalLightIntensity()
-{
-	// TODO: This method should be removed in version 0.20
-	qWarning() << "WARNING: core.getZodiacalLightIntensity() is deprecated and will soon be removed. Use ZodiacalLight.getIntensity() instead.";
-	return GETSTELMODULE(ZodiacalLight)->getIntensity();
-}
-
 int StelMainScriptAPI::getBortleScaleIndex()
 {
 	return StelApp::getInstance().getCore()->getSkyDrawer()->getBortleScaleIndex();
@@ -1304,20 +1260,6 @@ double StelMainScriptAPI::refraction(double altitude, bool apparent)
 		refraction.forward(pos);
 	}
 	return asin(pos[2])*M_180_PI;
-}
-
-void StelMainScriptAPI::setDSSMode(bool b)
-{
-	// TODO: This method should be removed in version 0.20
-	qWarning() << "WARNING: core.setDSSMode() is deprecated and will soon be removed. Use ToastMgr.setFlagShow() instead.";
-	GETSTELMODULE(ToastMgr)->setFlagShow(b);
-}
-
-bool StelMainScriptAPI::isDSSModeEnabled()
-{
-	// TODO: This method should be removed in version 0.20
-	qWarning() << "WARNING: core.isDSSModeEnabled() is deprecated and will soon be removed. Use ToastMgr.getFlagShow() instead.";
-	return GETSTELMODULE(ToastMgr)->getFlagShow();
 }
 
 QVariantMap StelMainScriptAPI::getScreenXYFromAltAzi(const QString &alt, const QString &azi)

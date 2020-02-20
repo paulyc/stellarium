@@ -196,7 +196,8 @@ The first option allows you to define the general behaviour of the plugin.
 The options are grouped by areas of usage: \emph{Interface}, \emph{Ocular view}, \emph{Sensor view} and \emph{Telrad view} (see figure \ref{fig:plugins:Oculars:Gui:General}).
 
 \begin{figure}[ht]\centering
-\includegraphics[width=0.75\textwidth]{oculars_gui_general.png}
+  \includegraphics[width=0.75\textwidth]{oculars_gui_general.png}
+  % TODO: UPDATE IMAGE FOR 0.20.0
 \caption{General tab of the Oculars plugin configuration dialog.}
 \label{fig:plugins:Oculars:Gui:General}
 \end{figure}
@@ -212,6 +213,8 @@ The options are grouped by areas of usage: \emph{Interface}, \emph{Ocular view},
          In addition, this option will show visual resolution for selected ``setup''. This option may be very helpful for double star observers.
    \item[Show oculars button on toolbar] option\newFeature{v0.19.0} allows to toggle visibility the plugin button on main toolbar. 
    \item[Arrow button scale] allows to change the size of the arrow buttons in the ocular GUI panel. 
+   \item[Line Color] Select \newFeature{v0.20.0} color for ocular and sensor outlines and their labels.
+   \item[Text Color] Select \newFeature{v0.20.0} color for screen messages which are shown only when the on-screen control panel is not shown.
  \end{description}
 \item[Ocular view] is a group of options that allows to change the plugin's behaviour in visual observation mode.
  \begin{description}
@@ -623,8 +626,11 @@ You will need access to an INDI server through a TCP/IP connection.\newFeature{v
 Please see INDI documentation for details. You will need to select the correct INDI device to manage it.
 
 \paragraph{ASCOM settings}
-You can choose an ASCOM telescope driver installed in your system using the ASCOM chooser.\newFeature{v0.19.3} Additionally you can choose how Stellarium is determining the
-coordinate system used to communicate with the ASCOM mount. For more information, please see \ref{sec:plugins:TelescopeControl:ASCOM}.
+You can choose an ASCOM telescope driver installed in your system
+using the ASCOM chooser.\newFeature{v0.19.3} Additionally you can
+choose how Stellarium is determining the coordinate system used to
+communicate with the ASCOM mount. For more information, please see
+\ref{sec:plugins:TelescopeControl:ASCOM}.
 
 \paragraph{User Interface Settings: Field of view indicators}
 
@@ -850,19 +856,26 @@ List of telescope types supported by INDI\footnote{\url{http://indilib.org/devic
 \item IOptron GotoNova Upgrade Kit 8400
 \end{itemize}
 
-\section{ASCOM}
+\section{ASCOM (Windows only)}
 \label{sec:plugins:TelescopeControl:ASCOM}
 
-\indexterm{ASCOM}, \newFeature{v0.19.3}is probably the most widely used way how to communicate with telescopes, mounts
-and other astronomy equipment. The ASCOM platform aims to decouple device dependent specifics by introducing a common
-standard for communication between device drivers and applications. Almost every telescope mount comes with an ASCOM 
-driver and most of the astronomy software and tools can communicate with ASCOM compatible devices.
+\indexterm{ASCOM} \newFeature{v0.19.3}is probably the most widely used
+way how to communicate with telescopes, mounts and other astronomy
+equipment on Microsoft Windows operating systems. The ASCOM platform
+aims to decouple device dependent specifics by introducing a common
+standard for communication between device drivers and
+applications. Almost every telescope mount comes with an ASCOM driver
+and most of the astronomy software and tools can communicate with
+ASCOM compatible devices.
 
 The ASCOM telescope support has been added to Stellarium's Telescope Control plugin by Gion Kunz in version 0.19.3.
 
-Note that in order for Stellarium to communicate with your ASCOM compatible mount, you will need to have the ASCOM
-plaform installed on your Windows machine (version 6 or higher). Also, the ASCOM driver of your telescope mount
-needs to be installed before you can start using the telescope in Stellarium.
+Note that in order for Stellarium to communicate with your ASCOM
+compatible mount, you will need to have the ASCOM platform installed
+on your Windows machine (version 6 or
+higher\footnote{\url{https://ascom-standards.org/Downloads/Index.htm}}). Also,
+the ASCOM driver of your telescope mount needs to be installed before
+you can start using the telescope in Stellarium.
 
 \textbf{Important:} Most modern ASCOM drivers are written to run in 32bit and 64bit mode (any) and therefore are 
 compatible with the 64bit and 32bit version of Stellarium. However, if you happen to have a 32bit or 64bit only

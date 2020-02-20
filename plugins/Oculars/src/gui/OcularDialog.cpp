@@ -295,7 +295,7 @@ void OcularDialog::createDialogContent()
 	connectIntProperty(ui->guiFontSizeSpinBox,		"Oculars.guiPanelFontSize");
 	connectBoolProperty(ui->checkBoxInitialFOV,		"Oculars.flagInitFOVUsage");
 	connectBoolProperty(ui->checkBoxInitialDirection,	"Oculars.flagInitDirectionUsage");
-	connectBoolProperty(ui->checkBoxResolutionCriterion,	"Oculars.flagShowResolutionCriterions");
+	connectBoolProperty(ui->checkBoxResolutionCriterion,	"Oculars.flagShowResolutionCriteria");
 	connectBoolProperty(ui->requireSelectionCheckBox,	"Oculars.flagRequireSelection");
 	connectBoolProperty(ui->limitStellarMagnitudeCheckBox,	"Oculars.flagLimitMagnitude");
 	connectBoolProperty(ui->hideGridsLinesCheckBox,		"Oculars.flagHideGridsLines");
@@ -312,6 +312,8 @@ void OcularDialog::createDialogContent()
 	connectBoolProperty(ui->contourCheckBox,		"Oculars.flagShowContour");
 	connectBoolProperty(ui->cardinalsCheckBox,		"Oculars.flagShowCardinals");
 	connectBoolProperty(ui->alignCrosshairCheckBox,		"Oculars.flagAlignCrosshair");
+	connectColorButton(ui->textColorToolButton,             "Oculars.textColor", "text_color", "Oculars");
+	connectColorButton(ui->lineColorToolButton,             "Oculars.lineColor", "line_color", "Oculars");
 
 	// The add & delete buttons
 	connect(ui->addCCD,          SIGNAL(clicked()), this, SLOT(insertNewCCD()));
@@ -366,20 +368,20 @@ void OcularDialog::createDialogContent()
 	ui->ccdListView->setSelectionBehavior(QAbstractItemView::SelectRows);
 	ui->ccdListView->setCurrentIndex(ccdTableModel->index(0, 1));
 
-	connect(ui->ccdChipY,    SIGNAL(editingFinished()), ccdMapper, SLOT(submit()));
-	connect(ui->ccdChipX,    SIGNAL(editingFinished()), ccdMapper, SLOT(submit()));
-	connect(ui->ccdPixelY,   SIGNAL(editingFinished()), ccdMapper, SLOT(submit()));
-	connect(ui->ccdPixelX,   SIGNAL(editingFinished()), ccdMapper, SLOT(submit()));
-	connect(ui->ccdResX,     SIGNAL(editingFinished()), ccdMapper, SLOT(submit()));
-	connect(ui->ccdResY,     SIGNAL(editingFinished()), ccdMapper, SLOT(submit()));
-	connect(ui->ccdRotAngle, SIGNAL(editingFinished()), ccdMapper, SLOT(submit()));
-	connect(ui->ccdBinningX, SIGNAL(editingFinished()), ccdMapper, SLOT(submit()));
-	connect(ui->ccdBinningY, SIGNAL(editingFinished()), ccdMapper, SLOT(submit()));
-	connect(ui->OAG_checkBox,SIGNAL(stateChanged(int)), ccdMapper, SLOT(submit()));
-	connect(ui->OAGPrismH,   SIGNAL(editingFinished()), ccdMapper, SLOT(submit()));
-	connect(ui->OAGPrismW,   SIGNAL(editingFinished()), ccdMapper, SLOT(submit()));
-	connect(ui->OAGDist,     SIGNAL(editingFinished()), ccdMapper, SLOT(submit()));
-	connect(ui->OAGPrismPA,  SIGNAL(editingFinished()), ccdMapper, SLOT(submit()));
+	connect(ui->ccdChipY,    SIGNAL(editingFinished()), this, SLOT(updateCCD()));
+	connect(ui->ccdChipX,    SIGNAL(editingFinished()), this, SLOT(updateCCD()));
+	connect(ui->ccdPixelY,   SIGNAL(editingFinished()), this, SLOT(updateCCD()));
+	connect(ui->ccdPixelX,   SIGNAL(editingFinished()), this, SLOT(updateCCD()));
+	connect(ui->ccdResX,     SIGNAL(editingFinished()), this, SLOT(updateCCD()));
+	connect(ui->ccdResY,     SIGNAL(editingFinished()), this, SLOT(updateCCD()));
+	connect(ui->ccdRotAngle, SIGNAL(editingFinished()), this, SLOT(updateCCD()));
+	connect(ui->ccdBinningX, SIGNAL(editingFinished()), this, SLOT(updateCCD()));
+	connect(ui->ccdBinningY, SIGNAL(editingFinished()), this, SLOT(updateCCD()));
+	connect(ui->OAG_checkBox,SIGNAL(stateChanged(int)), this, SLOT(updateCCD()));
+	connect(ui->OAGPrismH,   SIGNAL(editingFinished()), this, SLOT(updateCCD()));
+	connect(ui->OAGPrismW,   SIGNAL(editingFinished()), this, SLOT(updateCCD()));
+	connect(ui->OAGDist,     SIGNAL(editingFinished()), this, SLOT(updateCCD()));
+	connect(ui->OAGPrismPA,  SIGNAL(editingFinished()), this, SLOT(updateCCD()));
 
 	// The ocular mapper
 	ocularMapper = new QDataWidgetMapper();
@@ -456,6 +458,12 @@ void OcularDialog::updateLens()
 	plugin->selectLensAtIndex(plugin->getSelectedLensIndex());
 }
 
+void OcularDialog::updateCCD()
+{
+	ccdMapper->submit();
+	plugin->selectCCDAtIndex(plugin->getSelectedCCDIndex());
+}
+
 void OcularDialog::updateTelescope()
 {
 	telescopeMapper->submit();
@@ -517,44 +525,6 @@ void OcularDialog::initAboutText()
 	html += "<h3>" + q_("Hot Keys") + "</h3>";
 	html += "<p>" + q_("The plug-in's key bindings can be edited in the Keyboard shortcuts editor (F7).") + "</p>";
 
-	StelGui* gui = dynamic_cast<StelGui*>(StelApp::getInstance().getGui());
-	Q_ASSERT(gui);
-	StelActionMgr* actionMgr = StelApp::getInstance().getStelActionManager();
-	Q_ASSERT(actionMgr);
-	StelAction* actionOcular = actionMgr->findAction("actionShow_Ocular");
-	Q_ASSERT(actionOcular);
-	StelAction* actionMenu = actionMgr->findAction("actionShow_Ocular_Menu");
-	Q_ASSERT(actionMenu);
-	QKeySequence ocularShortcut = actionOcular->getShortcut();
-	QString ocularString = ocularShortcut.toString(QKeySequence::NativeText);
-	ocularString = ocularString.toHtmlEscaped();
-	if (ocularString.isEmpty())
-		ocularString = q_("[no key defined]");
-	QKeySequence menuShortcut = actionMenu->getShortcut();
-	QString menuString = menuShortcut.toString(QKeySequence::NativeText);
-	menuString = menuString.toHtmlEscaped();
-	if (menuString.isEmpty())
-		menuString = q_("[no key defined]");
-
-	html += "<ul>";
-	html += "<li>";
-	html += QString("<strong>%1:</strong> %2").arg(ocularString).arg(q_("Switches on/off the ocular overlay."));
-	html += "</li>";
-	
-	html += "<li>";
-	html += QString("<strong>%1:</strong> %2").arg(menuString).arg(q_("Opens the pop-up navigation menu."));
-	html += "</li>";
-
-	html += "<li>";
-	html += QString("<strong>%1:</strong> %2").arg("Alt+M").arg(q_("Rotate reticle pattern of the eyepiece clockwise."));
-	html += "</li>";
-
-	html += "<li>";
-	html += QString("<strong>%1:</strong> %2").arg("Shift+Alt+M").arg(q_("Rotate reticle pattern of the eyepiece сounterclockwise."));
-	html += "</li>";
-
-	html += "</ul>";
-
 	html += "<h3>" + q_("Links") + "</h3>";
 	html += "<p>" + QString(q_("Support is provided via the Github website.  Be sure to put \"%1\" in the subject when posting.")).arg("Oculars plugin") + "</p>";
 	html += "<p><ul>";
@@ -566,6 +536,8 @@ void OcularDialog::initAboutText()
 	html += "<li>" + q_("If you want to read full information about this plugin and its history, you can {get info here}.").toHtmlEscaped().replace(a_rx, "<a href=\"http://stellarium.sourceforge.net/wiki/index.php/Oculars_plugin\">\\1</a>") + "</li>";
 	html += "</ul></p></body></html>";
 
+	StelGui* gui = dynamic_cast<StelGui*>(StelApp::getInstance().getGui());
+	Q_ASSERT(gui);
 	QString htmlStyleSheet(gui->getStelStyle().htmlStyleSheet);
 	ui->textBrowser->document()->setDefaultStyleSheet(htmlStyleSheet);
 

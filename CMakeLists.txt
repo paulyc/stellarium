@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.0.0)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12)
 MESSAGE(STATUS "Found CMake ${CMAKE_VERSION}")
 
 IF(POLICY CMP0054)
@@ -19,7 +19,7 @@ PROJECT(Stellarium)
 # Use integer versions instead of strings for easier handling if required
 SET(STELLARIUM_MAJOR 0)
 SET(STELLARIUM_MINOR 19)
-SET(STELLARIUM_PATCH 2)
+SET(STELLARIUM_PATCH 3)
 ADD_DEFINITIONS(
      -DSTELLARIUM_MAJOR=${STELLARIUM_MAJOR}
      -DSTELLARIUM_MINOR=${STELLARIUM_MINOR}
@@ -56,14 +56,15 @@ SET(MIN_WIN_VERSION "0x0601")
 SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
 
 # Show platform info
-MESSAGE(STATUS "Platform: ${CMAKE_SYSTEM}")
+MESSAGE(STATUS "Platform: ${CMAKE_SYSTEM} (${CMAKE_SYSTEM_PROCESSOR})")
 
 ########### Main global variables ###########
 SET(ENABLE_TESTING 0 CACHE BOOL "Define whether the unit tests should be activated.")
 
 IF(NOT CMAKE_BUILD_TYPE)
-     SET(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build, options are: None Debug GProf Valgrind ASan UBSan Release RelWithDebInfo MinSizeRel." FORCE)
+     SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: None Debug GProf Valgrind ASan UBSan Release RelWithDebInfo MinSizeRel." FORCE)
 ENDIF()
+MESSAGE(STATUS "Build mode: ${CMAKE_BUILD_TYPE}")
 
 IF(${CMAKE_BUILD_TYPE} MATCHES "Debug")
      IF(CMAKE_COMPILER_IS_GNUCXX)
@@ -407,6 +408,7 @@ ADD_PLUGIN(SolarSystemEditor 1)
 ADD_PLUGIN(Supernovae 1)
 ADD_PLUGIN(TextUserInterface 1)
 ADD_PLUGIN(TelescopeControl 1)
+ADD_PLUGIN(Vts 0)
 
 ########## Static plugins need to define includes and libraries
 ########## for the compilation of Stellarium itself
