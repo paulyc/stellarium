@@ -832,14 +832,13 @@ void StelMainView::init()
 	//install the effect on the whole view
 	rootItem->setGraphicsEffect(nightModeEffect);
 
-	QDesktopWidget *desktop = QApplication::desktop();
 	int screen = conf->value("video/screen_number", 0).toInt();
-	if (screen < 0 || screen >= desktop->screenCount())
+    if (screen < 0 || screen >= QGuiApplication::screens().length())
 	{
 		qWarning() << "WARNING: screen" << screen << "not found";
 		screen = 0;
 	}
-	QRect screenGeom = desktop->screenGeometry(screen);
+    QRect screenGeom = QGuiApplication::screens().at(screen)->geometry();
 
 	QSize size = QSize(conf->value("video/screen_w", screenGeom.width()).toInt(),
 		     conf->value("video/screen_h", screenGeom.height()).toInt());
@@ -1305,12 +1304,12 @@ void StelMainView::setFullScreen(bool b)
 			QSettings *conf = stelApp->getSettings();
 			QDesktopWidget *desktop = QApplication::desktop();
 			int screen = conf->value("video/screen_number", 0).toInt();
-			if (screen < 0 || screen >= desktop->screenCount())
+            if (screen < 0 || screen >= QGuiApplication::screens().count())
 			{
 				qWarning() << "WARNING: screen" << screen << "not found";
 				screen = 0;
 			}
-			QRect screenGeom = desktop->screenGeometry(screen);
+            QRect screenGeom = desktop->QWidget::screen()->geometry();
 			int x = conf->value("video/screen_x", 0).toInt();
 			int y = conf->value("video/screen_y", 0).toInt();
 			move(x + screenGeom.x(), y + screenGeom.y());
@@ -1523,7 +1522,7 @@ void StelMainView::doScreenshot(void)
 	sParams.viewportXywh[3]=imgHeight;
 
 	// Configure a helper value to allow some modules to tweak their output sizes. Currently used by StarMgr, maybe solve font issues?
-	customScreenshotMagnification=(float)imgHeight/QApplication::desktop()->screenGeometry().height();
+	customScreenshotMagnification=(float)imgHeight/QApplication::desktop()->QWidget::screen()->geometry().height();
 
 	sParams.viewportCenter.set(0.0+(0.5+pParams.viewportCenterOffset.v[0])*imgWidth, 0.0+(0.5+pParams.viewportCenterOffset.v[1])*imgHeight);
 	sParams.viewportFovDiameter = qMin(imgWidth,imgHeight);

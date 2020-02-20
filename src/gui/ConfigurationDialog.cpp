@@ -62,6 +62,7 @@
 #include <QDir>
 #include <QDesktopWidget>
 #include <QImageWriter>
+#include <QScreen>
 
 //! Simple helper extension class which can guarantee int inputs in a useful range.
 class MinMaxIntValidator: public QIntValidator
@@ -979,7 +980,7 @@ void ConfigurationDialog::saveAllSettings()
 	conf->setValue("video/fullscreen", StelMainView::getInstance().isFullScreen());
 	if (!StelMainView::getInstance().isFullScreen())
 	{
-		QRect screenGeom = QApplication::desktop()->screenGeometry(screenNum);
+		QRect screenGeom = qApp->desktop()->QWidget::screen()->geometry();
 		QWidget& mainWindow = StelMainView::getInstance();
 		conf->setValue("video/screen_w", mainWindow.size().width());
 		conf->setValue("video/screen_h", mainWindow.size().height());

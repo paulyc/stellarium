@@ -107,10 +107,10 @@ void StelVideoMgr::loadVideo(const QString& filename, const QString& id, const f
 	videoObjects[id]->player->setMedia(content);
 	if (verbose)
 	{
-		qDebug() << "Loading " << content.canonicalUrl();
+        qDebug() << "Loading " << content.request().url();
 		qDebug() << "Media Resources queried from player:";
 		qDebug() << "\tSTATUS:        " << videoObjects[id]->player->mediaStatus();
-		qDebug() << "\tFile:          " << videoObjects[id]->player->currentMedia().canonicalUrl();
+		qDebug() << "\tFile:          " << videoObjects[id]->player->currentMedia().request().url();
 	}
 //	qDebug() << "scene->addItem...";
 	StelMainView::getInstance().scene()->addItem(videoObjects[id]->videoItem);

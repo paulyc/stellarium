@@ -43,7 +43,7 @@ bool ShortcutsFilterModel::filterAcceptsRow(int source_row, const QModelIndex &s
 	
 	if (source_parent.isValid())
 	{
-		QModelIndex index = source_parent.child(source_row, filterKeyColumn());
+		QModelIndex index = this->index(source_row, filterKeyColumn());
 		QString data = sourceModel()->data(index, filterRole()).toString();
 		return data.contains(filterRegExp());
 	}

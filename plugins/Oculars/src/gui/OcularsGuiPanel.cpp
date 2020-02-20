@@ -143,7 +143,7 @@ OcularsGuiPanel::OcularsGuiPanel(Oculars* plugin,
 
 	//Traditional field width from Ocular ;)
 	QFontMetrics fm(fieldOcularName->font());
-	int maxWidth = fm.width(QString("MMMMMMMMMMMMMMMMMMM"));
+	int maxWidth = fm.horizontalAdvance(QString("MMMMMMMMMMMMMMMMMMM"));
 	int lineHeight = fm.height();
 
 	fieldOcularName->setTextWidth(maxWidth);
@@ -259,7 +259,7 @@ OcularsGuiPanel::OcularsGuiPanel(Oculars* plugin,
 	QColor cOff(102, 102, 102);
 	QColor cHover(162, 162, 162);
 	QString degrees = QString("-15%1").arg(QChar(0x00B0));
-	int degreesW = fm.width(degrees);
+	int degreesW = fm.horizontalAdvance(degrees);
 	QPixmap pOn    = createPixmapFromText(degrees, degreesW, lineHeight, newFont, cOn);
 	QPixmap pOff   = createPixmapFromText(degrees, degreesW, lineHeight, newFont, cOff);
 	QPixmap pHover = createPixmapFromText(degrees, degreesW, lineHeight, newFont, cHover);
@@ -272,7 +272,7 @@ OcularsGuiPanel::OcularsGuiPanel(Oculars* plugin,
 	rotateCcdMinus15Button->setToolTip(q_("Rotate the sensor frame 15 degrees counterclockwise"));
 
 	degrees  = QString("-5%1").arg(QChar(0x00B0));
-	degreesW = fm.width(degrees);
+	degreesW = fm.horizontalAdvance(degrees);
 	pOn    = createPixmapFromText(degrees, degreesW, lineHeight, newFont, cOn);
 	pOff   = createPixmapFromText(degrees, degreesW, lineHeight, newFont, cOff);
 	pHover = createPixmapFromText(degrees, degreesW, lineHeight, newFont, cHover);
@@ -285,7 +285,7 @@ OcularsGuiPanel::OcularsGuiPanel(Oculars* plugin,
 	rotateCcdMinus5Button->setToolTip(q_("Rotate the sensor frame 5 degrees counterclockwise"));
 
 	degrees  = QString("-1%1").arg(QChar(0x00B0));
-	degreesW = fm.width(degrees);
+	degreesW = fm.horizontalAdvance(degrees);
 	pOn    = createPixmapFromText(degrees, degreesW, lineHeight, newFont, cOn);
 	pOff   = createPixmapFromText(degrees, degreesW, lineHeight, newFont, cOff);
 	pHover = createPixmapFromText(degrees, degreesW, lineHeight, newFont, cHover);
@@ -298,7 +298,7 @@ OcularsGuiPanel::OcularsGuiPanel(Oculars* plugin,
 	rotateCcdMinus1Button->setToolTip(q_("Rotate the sensor frame 1 degree counterclockwise"));
 
 	degrees  = QString("0%1").arg(QChar(0x00B0));
-	degreesW = fm.width(degrees);
+	degreesW = fm.horizontalAdvance(degrees);
 	pOn    = createPixmapFromText(degrees, degreesW, lineHeight, newFont, cOn);
 	pOff   = createPixmapFromText(degrees, degreesW, lineHeight, newFont, cOff);
 	pHover = createPixmapFromText(degrees, degreesW, lineHeight, newFont, cHover);
@@ -311,7 +311,7 @@ OcularsGuiPanel::OcularsGuiPanel(Oculars* plugin,
 	resetCcdRotationButton->setToolTip(q_("Reset the sensor frame rotation"));
 
 	degrees  = QString("+1%1").arg(QChar(0x00B0));
-	degreesW = fm.width(degrees);
+	degreesW = fm.horizontalAdvance(degrees);
 	pOn    = createPixmapFromText(degrees, degreesW, lineHeight, newFont, cOn);
 	pOff   = createPixmapFromText(degrees, degreesW, lineHeight, newFont, cOff);
 	pHover = createPixmapFromText(degrees, degreesW, lineHeight, newFont, cHover);
@@ -324,7 +324,7 @@ OcularsGuiPanel::OcularsGuiPanel(Oculars* plugin,
 	rotateCcdPlus1Button->setToolTip(q_("Rotate the sensor frame 1 degree clockwise"));
 
 	degrees  = QString("+5%1").arg(QChar(0x00B0));
-	degreesW = fm.width(degrees);
+	degreesW = fm.horizontalAdvance(degrees);
 	pOn    = createPixmapFromText(degrees, degreesW, lineHeight, newFont, cOn);
 	pOff   = createPixmapFromText(degrees, degreesW, lineHeight, newFont, cOff);
 	pHover = createPixmapFromText(degrees, degreesW, lineHeight, newFont, cHover);
@@ -337,7 +337,7 @@ OcularsGuiPanel::OcularsGuiPanel(Oculars* plugin,
 	rotateCcdPlus5Button->setToolTip(q_("Rotate the sensor frame 5 degrees clockwise"));
 
 	degrees  = QString("+15%1").arg(QChar(0x00B0));
-	degreesW = fm.width(degrees);
+	degreesW = fm.horizontalAdvance(degrees);
 	pOn    = createPixmapFromText(degrees, degreesW, lineHeight, newFont, cOn);
 	pOff   = createPixmapFromText(degrees, degreesW, lineHeight, newFont, cOff);
 	pHover = createPixmapFromText(degrees, degreesW, lineHeight, newFont, cHover);

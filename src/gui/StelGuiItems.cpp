@@ -874,10 +874,10 @@ void BottomStelBar::updateText(bool updatePos)
 	if (updatePos)
 	{
 		QFontMetrics fpsMetrics(fps->font());
-		int fpsShift = fpsMetrics.width(fpsstr) + 50;
+		int fpsShift = fpsMetrics.horizontalAdvance(fpsstr) + 50;
 
 		QFontMetrics fovMetrics(fov->font());
-		int fovShift = fpsShift + fovMetrics.width(fovstr) + 80;
+		int fovShift = fpsShift + fovMetrics.horizontalAdvance(fovstr) + 80;
 		if (getFlagFovDms())
 			fovShift += 25;
 

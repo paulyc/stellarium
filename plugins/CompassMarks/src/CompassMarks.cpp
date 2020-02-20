@@ -145,7 +145,7 @@ void CompassMarks::draw(StelCore* core)
 
 			QString s = QString("%1").arg((i+90+f)%360);
 
-			float shiftx = painter.getFontMetrics().width(s) / 2.;
+			float shiftx = painter.getFontMetrics().horizontalAdvance(s) / 2.;
 			float shifty = painter.getFontMetrics().height() / 2.;
 			painter.drawText(pos, s, 0, -shiftx, shifty);
 		}

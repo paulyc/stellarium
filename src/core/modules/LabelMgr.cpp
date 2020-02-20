@@ -288,9 +288,9 @@ bool SkyLabel::draw(StelCore* core, StelPainter& sPainter)
 	double jxOffset(0.);
 	double jyOffset(0.); 
 	if (hJustify == 'r')
-		jxOffset = sPainter.getFontMetrics().width(labelText);
+		jxOffset = sPainter.getFontMetrics().horizontalAdvance(labelText);
 	else if (hJustify == 'c')
-		jxOffset = sPainter.getFontMetrics().width(labelText) / 2.;
+		jxOffset = sPainter.getFontMetrics().horizontalAdvance(labelText) / 2.;
 
 	if (vJustify == 't')
 		jyOffset = sPainter.getFontMetrics().height();
